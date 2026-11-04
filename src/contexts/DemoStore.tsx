@@ -4,7 +4,7 @@ import type { DemoState } from '../types/demo';
 import type { FlowId } from '../types/nav';
 import { demoReducer } from '../utils/store/demoReducer';
 import { setupFlow } from '../utils/store/flowSetup';
-import { createInitialState, DEFAULT_CLOCK } from '../utils/store/initialState';
+import { createDemoState, createInitialState, DEFAULT_CLOCK } from '../utils/store/initialState';
 import { johannesburgNow } from '../utils/time';
 import { isLiveOrg } from '../utils/workspace';
 
@@ -19,13 +19,14 @@ interface StoreValue {
 const StoreCtx = createContext<StoreValue | null>(null);
 const ClockCtx = createContext<number>(DEFAULT_CLOCK);
 
-export function DemoProvider({ children }: {children: React.ReactNode;}) {
+export function DemoProvider({ children, sample = false }: {children: React.ReactNode;sample?: boolean;}) {
   const clockRef = useRef(DEFAULT_CLOCK);
   const offsetRef = useRef(0);
   const liveRef = useRef(false);
+  const sampleRef = useRef(sample);
   const [clock, setClock] = useState(DEFAULT_CLOCK);
   const [offset, setOffset] = useState(0);
-  const [state, raw] = useReducer(demoReducer, undefined, createInitialState);
+  const [state, raw] = useReducer(demoReducer, sample, (useSample) => useSample ? createDemoState() : createInitialState());
   const live = isLiveOrg(state.orgId) && !state.flow;
   liveRef.current = live;
 
@@ -66,7 +67,7 @@ export function DemoProvider({ children }: {children: React.ReactNode;}) {
     offsetRef.current = 0;
     setOffset(0);
     setClock(DEFAULT_CLOCK);
-    raw({ type: 'REPLACE_STATE', state: createInitialState(), now: DEFAULT_CLOCK });
+    raw({ type: 'REPLACE_STATE', state: sampleRef.current ? createDemoState() : createInitialState(), now: DEFAULT_CLOCK });
   }, []);
 
   const shown = live ? johannesburgNow().sec + offset : clock;

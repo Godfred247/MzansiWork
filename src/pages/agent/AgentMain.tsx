@@ -22,6 +22,7 @@ import { twMerge } from 'tailwind-merge';
 import { Avatar } from '../../components/shared/Avatar';
 import { Button } from '../../components/shared/Button';
 import { useClock, useDemo } from '../../contexts/DemoStore';
+import { usePresentational } from '../../contexts/Presentational';
 import { brand } from '../../data/brand';
 import { actorId, actorMember } from '../../utils/selectors';
 import { trackingPolicy } from '../../data/policy';
@@ -41,6 +42,7 @@ const toneIcon = { success: ActivityIcon, info: CoffeeIcon, warning: MoonIcon, d
 export function AgentMain() {
   const { state, dispatch } = useDemo();
   const clock = useClock();
+  const presentational = usePresentational();
   const a = state.agent;
   const se = state.session;
   const status = deriveAgentStatus(state);
@@ -138,6 +140,7 @@ export function AgentMain() {
         }
       </nav>
 
+      {!presentational &&
       <div className="mx-4 mb-4 mt-auto rounded-xl border border-dashed border-white/20 p-3">
         <p className="text-[11px] font-semibold text-navy-300">Demo controls · not part of the product</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -156,6 +159,7 @@ export function AgentMain() {
           </p>
         }
       </div>
+      }
     </div>);
 
 }

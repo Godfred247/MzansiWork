@@ -44,6 +44,8 @@ export function Dashboard() {
   const hoursToday = all.reduce((a, m) => a + m.hoursToday, 0);
   const reviewSec = corr.reduce((a, c) => a + (c.durationSec ?? 0), 0) + state.intervals.filter((i) => i.type === 'idle' && i.status === 'unclassified' && !i.queued && i.endSec && inScope(role, i.memberId)).reduce((a, i) => a + ((i.endSec ?? 0) - i.startSec), 0);
   const unread = state.notifications.filter((n) => n.app === 'employer' && !n.read).length;
+  const live = isLiveOrg(state.orgId) && !state.flow;
+  const todayIso = live ? johannesburgNow().iso : TODAY;
   const outToday = state.leave.filter((l) => l.status === 'approved' && l.start <= todayIso && l.end >= todayIso && inScope(role, l.memberId));
   const upcoming = state.leave.filter((l) => (l.status === 'approved' || l.status === 'pending') && l.start > todayIso && inScope(role, l.memberId)).slice(0, 3);
   const trend = [...weeklyHours, { day: 'Today', hours: hoursToday, live: true }];
@@ -53,8 +55,6 @@ export function Dashboard() {
   { n: out.length, cls: 'bg-subtle', label: 'Clocked out' },
   { n: notIn.length, cls: 'bg-line', label: 'Not in' }];
 
-  const live = isLiveOrg(state.orgId) && !state.flow;
-  const todayIso = live ? johannesburgNow().iso : TODAY;
   const greetingSec = ((clock % 86400) + 86400) % 86400;
   const greeting = greetingSec < 12 * 3600 ? 'Good morning' : greetingSec < 17 * 3600 ? 'Good afternoon' : 'Good evening';
   const firstName = signedInName(state).split(' ')[0];

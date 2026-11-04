@@ -19,7 +19,7 @@ export function Welcome() {
     <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 pb-8 pt-10">
       <Logo size="lg" />
       <h1 className="mt-8 text-[28px] font-bold leading-tight tracking-tight text-ink">Workforce time, made clear.</h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-muted">{brand.tagline} Built for Southern African teams.</p>
+      <p className="mt-2 text-[15px] leading-relaxed text-muted">{brand.tagline} Built for Southern Africa.</p>
       <ul className="mt-6 space-y-3">
         {points.map((p) =>
         <li key={p.text} className="flex items-start gap-3 text-[14px] text-ink">
