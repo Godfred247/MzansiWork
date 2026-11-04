@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "MzansiWork",
+    "slug": "mzansiwork-employer",
+    "scheme": "mzansiwork",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "android": { "package": "za.co.mzansiwork.employer" },
+    "ios": { "bundleIdentifier": "za.co.mzansiwork.employer", "supportsTablet": true }
+  }
+}

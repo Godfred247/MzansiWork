@@ -1,0 +1,6 @@
+@MzansiWork.Api_HostAddress = http://localhost:5230
+
+GET {{MzansiWork.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
