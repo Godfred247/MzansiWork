@@ -22,7 +22,7 @@ export function ExportCentre() {
           <AccessDenied
             title="Exports are restricted"
             body="You can only download data your role is allowed to see. This account does not have export permission."
-            attempted="GET /api/organisations/karoo/exports"
+            attempted="GET /api/organisations/mzansiwork/exports"
             role={viewerRoleLabel(state.viewerRole)} />
         </ScreenBody>
       </>);

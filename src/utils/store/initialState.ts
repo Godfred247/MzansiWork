@@ -36,8 +36,12 @@ export function createInitialState(): DemoState {
     corrections: [],
     daySubmissions: {},
     leave: [],
+    leavePolicies: [],
+    leaveOpenings: [],
     balances: [],
     projects: [],
+    employeeWorkOptions: { projects: [], tasks: [], categories: [] },
+    employeeWorkOptionsLoading: false,
     exports: [],
     audit: [],
     notifications: [],
@@ -53,13 +57,13 @@ export function createDemoState(): DemoState {
     employeeMemberId: 'm-thandi',
     viewerMemberId: 'm-lerato',
     org: {
-      name: 'Karoo Digital (Pty) Ltd',
+      name: 'Mzansi Work (Pty) Ltd',
       timezone: 'Africa/Johannesburg',
       currency: 'ZAR',
       week: 'Monday – Friday',
       hours: '08:00 – 17:00',
       branches: ['Cape Town', 'Johannesburg'],
-      contact: 'hello@karoodigital.co.za · 021 555 0142'
+      contact: 'hello@mzansiwork.co.za · 021 555 0142'
     },
     viewerRole: 'owner',
     employerAuthed: true,
@@ -69,6 +73,7 @@ export function createDemoState(): DemoState {
     employeeIssue: null,
     employeeViewport: 'fit',
     members: clone(members),
+    approverFor: {},
     invitations: clone(invitations),
     session: {
       state: 'clocked_in',
@@ -79,7 +84,7 @@ export function createDemoState(): DemoState {
       submitted: false,
       workIntervalId: 'iv-t26-w2'
     },
-    intervals: clone(seedIntervals),
+    intervals: clone(seedIntervals).map((interval) => ({ ...interval, seeded: true })),
     events: clone(seedEvents),
     corrections: clone(seedCorrections),
     daySubmissions: {
@@ -91,8 +96,12 @@ export function createDemoState(): DemoState {
       '2026-10-26': 'open'
     },
     leave: clone(seedLeave),
+    leavePolicies: [],
+    leaveOpenings: [],
     balances: clone(seedBalances),
     projects: clone(projects),
+    employeeWorkOptions: { projects: [], tasks: [], categories: [] },
+    employeeWorkOptionsLoading: false,
     subscription: {
       planId: 'small',
       frequency: 'monthly',

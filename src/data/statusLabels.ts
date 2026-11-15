@@ -61,3 +61,7 @@ export const leaveTypeLabels: Record<LeaveType, string> = {
   unpaid: 'Unpaid leave',
   study: 'Study leave (employer benefit)'
 };
+
+export function leaveTypeName(type: string): string {
+  return Object.prototype.hasOwnProperty.call(leaveTypeLabels, type) ? leaveTypeLabels[type as LeaveType] : type;
+}

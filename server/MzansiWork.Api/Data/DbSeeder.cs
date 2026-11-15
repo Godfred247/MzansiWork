@@ -11,28 +11,33 @@ public static class DbSeeder
 
     public static void Seed(AppDbContext db)
     {
-        if (db.Organisations.Any()) return;
+        if (db.Organisations.Any())
+        {
+            RefreshDemoOrganisation(db);
+            return;
+        }
+
         var password = PasswordHasher.Hash("Password123");
         using var transaction = db.Database.BeginTransaction();
         db.Organisations.Add(new Organisation
         {
             Id = OrgId,
-            Name = "Karoo Digital (Pty) Ltd",
-            Contact = "hello@karoodigital.co.za",
+            Name = "Mzansi Work (Pty) Ltd",
+            Contact = "hello@mzansiwork.co.za",
             Timezone = "Africa/Johannesburg"
         });
         db.SaveChanges();
         db.Users.AddRange(
-            User(OwnerId, "Lerato Mokoena", "lerato@karoodigital.co.za", "owner", "Leadership", true, password),
-            User(ThandiId, "Thandi Nkosi", "thandi@karoodigital.co.za", "employee", "Design", false, password),
-            User(Guid.NewGuid(), "Pieter van Wyk", "pieter@karoodigital.co.za", "manager", "Operations", false, password),
-            User(Guid.NewGuid(), "Zanele Mthembu", "zanele@karoodigital.co.za", "employee", "Operations", false, password));
+            User(OwnerId, "Lerato Mokoena", "lerato@mzansiwork.co.za", "owner", "Leadership", true, password),
+            User(ThandiId, "Thandi Nkosi", "thandi@mzansiwork.co.za", "employee", "Design", false, password),
+            User(Guid.NewGuid(), "Pieter van Wyk", "pieter@mzansiwork.co.za", "manager", "Operations", false, password),
+            User(Guid.NewGuid(), "Zanele Mthembu", "zanele@mzansiwork.co.za", "employee", "Operations", false, password));
         db.SaveChanges();
         db.Invitations.Add(new Invitation
         {
             Id = Guid.NewGuid(),
             OrganisationId = OrgId,
-            Email = "keabetswe@karoodigital.co.za",
+            Email = "keabetswe@mzansiwork.co.za",
             Role = "employee",
             Department = "Design",
             Branch = "Johannesburg",
@@ -74,6 +79,49 @@ public static class DbSeeder
         });
         db.SaveChanges();
         transaction.Commit();
+    }
+
+    private static void RefreshDemoOrganisation(AppDbContext db)
+    {
+        var organisation = db.Organisations.Find(OrgId);
+        if (organisation is null) return;
+
+        var changed = false;
+        if (organisation.Name != "Mzansi Work (Pty) Ltd")
+        {
+            organisation.Name = "Mzansi Work (Pty) Ltd";
+            changed = true;
+        }
+
+        if (organisation.Contact != "hello@mzansiwork.co.za")
+        {
+            organisation.Contact = "hello@mzansiwork.co.za";
+            changed = true;
+        }
+
+        foreach (var user in db.Users.Where(user => user.OrganisationId == OrgId))
+        {
+            var email = WithDemoEmailDomain(user.Email);
+            if (email == user.Email) continue;
+            user.Email = email;
+            changed = true;
+        }
+
+        foreach (var invitation in db.Invitations.Where(invitation => invitation.OrganisationId == OrgId))
+        {
+            var email = WithDemoEmailDomain(invitation.Email);
+            if (email == invitation.Email) continue;
+            invitation.Email = email;
+            changed = true;
+        }
+
+        if (changed) db.SaveChanges();
+    }
+
+    private static string WithDemoEmailDomain(string email)
+    {
+        var separator = email.LastIndexOf('@');
+        return separator < 0 ? email : $"{email[..separator]}@mzansiwork.co.za";
     }
 
     private static AppUser User(Guid id, string name, string email, string role, string department, bool billing, string hash) => new()

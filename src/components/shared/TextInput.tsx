@@ -6,11 +6,12 @@ interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   leading?: React.ReactNode;
 }
 
-export function TextInput({ invalid, leading, className, id, ...rest }: TextInputProps) {
+export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(function TextInput({ invalid, leading, className, id, ...rest }, ref) {
   return (
     <div className="relative">
       {leading && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">{leading}</span>}
       <input
+        ref={ref}
         id={id}
         {...rest}
         aria-invalid={invalid || undefined}
@@ -24,4 +25,4 @@ export function TextInput({ invalid, leading, className, id, ...rest }: TextInpu
       
     </div>);
 
-}
+});

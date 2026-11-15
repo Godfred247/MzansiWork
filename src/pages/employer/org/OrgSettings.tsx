@@ -26,7 +26,7 @@ export function OrgSettings() {
           <AccessDenied
             title="Organisation settings are owner-only"
             body="Managers can work with people and approvals. Changing the organisation profile, week and default hours is limited to the owner."
-            attempted="PATCH /api/organisations/karoo"
+            attempted="PATCH /api/organisations/mzansiwork"
             role={viewerRoleLabel(state.viewerRole)} />
         </ScreenBody>
       </>);

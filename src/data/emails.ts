@@ -5,7 +5,7 @@ export interface EmailTemplate {
   body: string;
 }
 
-const org = 'Karoo Digital (Pty) Ltd';
+const org = 'Mzansi Work (Pty) Ltd';
 
 export const emailTemplates: EmailTemplate[] = [
   {
@@ -99,6 +99,6 @@ export function invitationEmail(email: string, role: string, department: string)
     id: 'employee-invite',
     name: 'Employee invitation',
     subject: `You’re invited to ${org} on MzansiWork`,
-    body: `To: ${email}\nFrom: MzansiWork <noreply@mzansiwork.co.za>\n\nHello,\n\nLerato Mokoena has invited you to join ${org} as a ${role} in ${department}.\n\nAccept within 7 days: https://app.mzansiwork.co.za/invite/demo\n\nThis invitation reserves one seat. It does not create a separate subscription for you. Employees never pay for their own MzansiWork seat.\n\nThis message is queued for SendGrid. No mailbox was contacted from this browser.`
+    body: `To: ${email}\nFrom: MzansiWork <noreply@mzansiwork.co.za>\n\nHello,\n\nYou are invited to join ${org} as a ${role} in ${department}.\n\nFor this demo, no email is sent. Open employee sign-in, choose Employee, and enter ${email}. You will create your password there. Do this within 7 days.\n\nThis invitation reserves one seat. Employees do not pay for their own seat.`
   };
 }

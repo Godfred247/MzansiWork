@@ -25,6 +25,15 @@ public class AppUser
     public bool BillingAccess { get; set; }
 }
 
+public class EmployeeWorkOptionsRecord
+{
+    public Guid OrganisationId { get; set; }
+    public Guid UserId { get; set; }
+    public string ProjectsJson { get; set; } = "[]";
+    public string TasksJson { get; set; } = "[]";
+    public string CategoriesJson { get; set; } = "[]";
+}
+
 public class Invitation
 {
     public Guid Id { get; set; }
@@ -81,6 +90,34 @@ public class LeaveRequestRecord
     public string Status { get; set; } = "pending";
     public string? DecisionReason { get; set; }
     public string? ReviewerName { get; set; }
+}
+
+public class LeavePolicyRecord
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public bool Enabled { get; set; } = true;
+    public bool TracksDays { get; set; }
+    public string GrantMode { get; set; } = "upfront";
+    public decimal? AllowanceDays { get; set; }
+    public decimal? MonthlyDays { get; set; }
+    public string Cycle { get; set; } = "year";
+    public DateOnly CycleStart { get; set; }
+    public string AppliesTo { get; set; } = "Everyone";
+    public string EmployeeNote { get; set; } = "";
+    public int SortOrder { get; set; }
+}
+
+public class LeaveOpeningRecord
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid UserId { get; set; }
+    public Guid PolicyId { get; set; }
+    public decimal OpeningDays { get; set; }
+    public DateOnly AsOf { get; set; }
 }
 
 public class AgentEvent

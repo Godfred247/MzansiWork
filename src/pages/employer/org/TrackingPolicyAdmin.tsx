@@ -28,7 +28,7 @@ export function TrackingPolicyAdmin() {
           <AccessDenied
             title="Only the owner can change tracking policy"
             body="Employees can read the policy. Managers can see observations they are allowed to review. Changing what is collected requires the owner."
-            attempted="PATCH /api/organisations/karoo/tracking-policy"
+            attempted="PATCH /api/organisations/mzansiwork/tracking-policy"
             role={viewerRoleLabel(state.viewerRole)} />
         </ScreenBody>
       </>);

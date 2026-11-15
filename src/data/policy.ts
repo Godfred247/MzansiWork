@@ -1,5 +1,5 @@
 export const trackingPolicy = {
-  name: 'Karoo Digital — Standard tracking policy',
+  name: 'Mzansi Work — Standard tracking policy',
   version: 'v3 · updated 1 Sep 2026',
   idleThresholdMin: 5,
   explanationOverMin: 15,
@@ -8,7 +8,7 @@ export const trackingPolicy = {
   rounding: 'No rounding',
   overtimeWarning: 'Warn above 45 hours per week (estimate only)',
   pauseAllowed: true,
-  approver: 'Line manager, then Operations Manager'
+  approver: 'A person the owner chooses. A manager is not the approver unless the owner picks them.'
 };
 
 export const collected = [

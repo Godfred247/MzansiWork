@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { readToken } from '../../api/client';
+import { loadLeaveSetup } from '../../api/leave';
 import { BottomNav } from '../../components/employer/BottomNav';
 import { Button } from '../../components/shared/Button';
 import { ToastHost } from '../../components/shared/ToastHost';
 import { useDemo } from '../../contexts/DemoStore';
 import type { EmployerScreen } from '../../types/nav';
+import { isLiveOrg } from '../../utils/workspace';
 import { AuditHistory } from './account/AuditHistory';
 import { EmailTemplates } from './account/EmailTemplates';
 import { LiveWorkspace } from './account/LiveWorkspace';
@@ -23,6 +26,7 @@ import { PlanChange } from './billing/PlanChange';
 import { Subscription } from './billing/Subscription';
 import { Dashboard } from './home/Dashboard';
 import { LeaveManagement } from './leave/LeaveManagement';
+import { LeavePolicyScreen } from './leave/LeavePolicy';
 import { More } from './more/More';
 import { CreateAccount } from './onboarding/CreateAccount';
 import { EmployerSignIn } from './onboarding/EmployerSignIn';
@@ -70,6 +74,7 @@ const screens: Record<EmployerScreen, React.ComponentType> = {
   emails: EmailTemplates,
   live: LiveWorkspace,
   leave: LeaveManagement,
+  'leave-policy': LeavePolicyScreen,
   projects: Projects,
   settings: OrgSettings,
   policy: TrackingPolicyAdmin,
@@ -90,6 +95,17 @@ const onboarding: EmployerScreen[] = ['welcome', 'signin', 'forgot', 'create', '
 export function EmployerApp() {
   const { state, dispatch } = useDemo();
   const running = state.exports.filter((x) => x.status === 'running').map((x) => `${x.id}:${x.willFail ? 1 : 0}`).join('|');
+
+  useEffect(() => {
+    if (!state.employerAuthed || !isLiveOrg(state.orgId) || state.flow) return;
+    const token = readToken('employer');
+    if (!token) return;
+    let active = true;
+    void loadLeaveSetup(token).then((setup) => {
+      if (active) dispatch({ type: 'SET_LEAVE_SETUP', ...setup });
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [state.employerAuthed, state.orgId, state.flow, dispatch]);
 
   useEffect(() => {
     if (!running) return;

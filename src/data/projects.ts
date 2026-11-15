@@ -31,7 +31,7 @@ export const projects: Project[] = [
 
 },
 {
-  id: 'p-website', name: 'Internal Website', description: 'Refresh of karoodigital.co.za.', billable: false, status: 'active',
+  id: 'p-website', name: 'Internal Website', description: 'Refresh of mzansiwork.co.za.', billable: false, status: 'active',
   members: ['m-thandi', 'm-lindiwe', 'm-fatima'], start: '2026-09-14', hoursWeek: 31,
   tasks: [
   { id: 't-ia', name: 'Information architecture', assignees: ['m-thandi', 'm-fatima'], billable: false, status: 'open' },

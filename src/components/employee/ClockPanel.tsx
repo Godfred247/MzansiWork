@@ -5,10 +5,10 @@ import { twMerge } from 'tailwind-merge';
 import { useClock, useDemo } from '../../contexts/DemoStore';
 import { useEmployeeLayout } from '../../contexts/EmployeeLayout';
 import { breakCategories } from '../../data/projects';
-import { actorId } from '../../utils/selectors';
+import { actorId, currentWorkDate } from '../../utils/selectors';
 import { dayTotals, intervalsFor } from '../../utils/selectors';
 import { taskText } from '../../utils/store/timeReducer';
-import { TODAY, fmtClock, fmtDur, secToLabel } from '../../utils/time';
+import { fmtClock, fmtDur, secToLabel } from '../../utils/time';
 import { Button } from '../shared/Button';
 import { Dialog } from '../shared/Dialog';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -21,13 +21,13 @@ export function ClockPanel({ onShowSummary }: {onShowSummary: () => void;}) {
   const layout = useEmployeeLayout();
   const se = state.session;
   const offline = state.employeeIssue === 'offline';
-  const [task, setTask] = useState<TaskValue>({ projectId: 'p-shoprite', taskId: 't-checkout', category: 'Client work' });
+  const [task, setTask] = useState<TaskValue>({ category: 'General administration' });
   const [switchOpen, setSwitchOpen] = useState(false);
   const [switchVal, setSwitchVal] = useState<TaskValue>({ category: 'Client work' });
   const [breakOpen, setBreakOpen] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
   const [justOut, setJustOut] = useState(false);
-  const totals = dayTotals(intervalsFor(state, actorId(state), TODAY), clock);
+  const totals = dayTotals(intervalsFor(state, actorId(state), currentWorkDate(state)), clock);
 
   useEffect(() => {
     if (justOut && se.state === 'ended') {

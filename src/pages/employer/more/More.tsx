@@ -32,7 +32,7 @@ const groups: {title: string;items: {screen: EmployerScreen;title: string;subtit
   title: 'Work',
   items: [
   { screen: 'reports', title: 'Reports', subtitle: 'Attendance, timesheets, leave and exceptions', icon: ClipboardListIcon, tone: 'primary' },
-  { screen: 'leave', title: 'Leave management', subtitle: 'Requests, balances and team calendar', icon: PlaneIcon, tone: 'teal' },
+  { screen: 'leave', title: 'Leave management', subtitle: 'Requests, balances and the days you allow', icon: PlaneIcon, tone: 'teal' },
   { screen: 'projects', title: 'Tasks and projects', subtitle: 'Where time is recorded', icon: FolderKanbanIcon, tone: 'navy' },
   { screen: 'exports', title: 'Export centre', subtitle: 'CSV, Excel and PDF downloads', icon: DownloadIcon },
   { screen: 'emails', title: 'Email templates', subtitle: 'Invitations, leave, billing and resets', icon: MailIcon, tone: 'teal' },
@@ -43,7 +43,7 @@ const groups: {title: string;items: {screen: EmployerScreen;title: string;subtit
   items: [
   { screen: 'settings', title: 'Organisation settings', subtitle: 'Hours, time zone and branches', icon: Building2Icon },
   { screen: 'policy', title: 'Tracking policy', subtitle: 'What is collected, and when', icon: ShieldIcon, tone: 'teal' },
-  { screen: 'roles', title: 'Roles and permissions', subtitle: 'Who can approve, invite and bill', icon: SettingsIcon },
+  { screen: 'roles', title: 'Roles and permissions', subtitle: 'Choose who approves timesheets and leave', icon: SettingsIcon },
   { screen: 'subscription', title: 'Subscription and billing', subtitle: 'Plan, seats and payment', icon: WalletIcon, tone: 'navy' },
   { screen: 'audit', title: 'Audit history', subtitle: 'Who changed what, and why', icon: ScrollTextIcon }]
 },

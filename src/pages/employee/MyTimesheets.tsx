@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { addDays, format, getDay, parseISO, startOfMonth, startOfWeek } from 'date-fns';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PencilLineIcon } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { CorrectionDialog, type CorrectionTarget } from '../../components/employee/CorrectionDialog';
@@ -11,12 +12,10 @@ import { TimelineBar } from '../../components/shared/TimelineBar';
 import { TimelineLegend } from '../../components/shared/TimelineLegend';
 import { useClock, useDemo } from '../../contexts/DemoStore';
 import { useEmployeeLayout } from '../../contexts/EmployeeLayout';
-import { actorId } from '../../utils/selectors';
 import { correctionLabels } from '../../data/statusLabels';
-import { octoberHistory, weeks } from '../../data/timesheetHistory';
 import type { Tone } from '../../types/org';
-import { dayTotals, intervalsFor } from '../../utils/selectors';
-import { TODAY, fmtDate, fmtDur, fmtHours, secToLabel } from '../../utils/time';
+import { actorId, currentWorkDate, dayTotals, intervalsFor } from '../../utils/selectors';
+import { fmtDate, fmtDur, fmtHours, secToLabel } from '../../utils/time';
 
 type View = 'day' | 'week' | 'month';
 
@@ -25,10 +24,18 @@ export function MyTimesheets() {
   const clock = useClock();
   const layout = useEmployeeLayout();
   const [view, setView] = useState<View>('week');
-  const [weekIdx, setWeekIdx] = useState(1);
-  const [date, setDate] = useState(TODAY);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const today = currentWorkDate(state);
+  const [date, setDate] = useState(today);
   const [target, setTarget] = useState<CorrectionTarget>(null);
-  const week = weeks[weekIdx];
+  const weekStart = startOfWeek(addDays(parseISO(today), weekOffset * 7), { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, index) => format(addDays(weekStart, index), 'yyyy-MM-dd'));
+  const weekEnd = addDays(weekStart, 6);
+  const weekLabel = format(weekStart, 'yyyy') === format(weekEnd, 'yyyy')
+    ? format(weekStart, 'MMM yyyy') === format(weekEnd, 'MMM yyyy')
+      ? `${format(weekStart, 'd')}–${format(weekEnd, 'd MMM yyyy')}`
+      : `${format(weekStart, 'd MMM')}–${format(weekEnd, 'd MMM yyyy')}`
+    : `${format(weekStart, 'd MMM yyyy')}–${format(weekEnd, 'd MMM yyyy')}`;
 
   const dayStatus = (d: string): {label: string;tone: Tone;} => {
     const st = state.daySubmissions[d];
@@ -44,10 +51,11 @@ export function MyTimesheets() {
     setView('day');
   };
 
-  const rows = week.days.map((d) => {
+  const rows = weekDays.map((d) => {
     const t = dayTotals(intervalsFor(state, actorId(state), d), clock);
-    const weekend = d.endsWith('24') || d.endsWith('25') || d.endsWith('31') || d.endsWith('01');
-    return { d, t, weekend, future: d > TODAY };
+    const weekday = getDay(parseISO(d));
+    const weekend = weekday === 0 || weekday === 6;
+    return { d, t, weekend, future: d > today };
   });
   const totalWork = rows.reduce((a, r) => a + r.t.work, 0);
   const approved = rows.filter((r) => state.daySubmissions[r.d] === 'approved').reduce((a, r) => a + r.t.approvedEstimate, 0);
@@ -74,14 +82,14 @@ export function MyTimesheets() {
         <Segmented label="Timesheet view" value={view} onChange={setView} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]} />
         {view === 'week' &&
         <div className="flex items-center gap-1">
-            <button aria-label="Previous week" disabled={weekIdx === 0} onClick={() => setWeekIdx(0)} className="rounded-md p-1.5 text-muted hover:bg-hover disabled:opacity-30"><ChevronLeftIcon className="h-4 w-4" /></button>
-            <span className="tnum min-w-[150px] text-center text-sm font-medium text-ink">{week.label}</span>
-            <button aria-label="Next week" disabled={weekIdx === 1} onClick={() => setWeekIdx(1)} className="rounded-md p-1.5 text-muted hover:bg-hover disabled:opacity-30"><ChevronRightIcon className="h-4 w-4" /></button>
+            <button aria-label="Previous week" onClick={() => setWeekOffset((offset) => offset - 1)} className="rounded-md p-1.5 text-muted hover:bg-hover"><ChevronLeftIcon className="h-4 w-4" /></button>
+            <span className="tnum min-w-[150px] text-center text-sm font-medium text-ink">{weekLabel}</span>
+            <button aria-label="Next week" disabled={weekOffset === 0} onClick={() => setWeekOffset((offset) => Math.min(0, offset + 1))} className="rounded-md p-1.5 text-muted hover:bg-hover disabled:opacity-30"><ChevronRightIcon className="h-4 w-4" /></button>
           </div>
         }
         {view === 'day' &&
         <select aria-label="Choose day" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-3 text-sm">
-            {[...weeks[0].days.slice(0, 5), TODAY].reverse().map((d) => <option key={d} value={d}>{fmtDate(d)}</option>)}
+            {weekDays.filter((day) => day <= today).reverse().map((day) => <option key={day} value={day}>{fmtDate(day)}</option>)}
           </select>
         }
       </div>
@@ -127,7 +135,7 @@ export function MyTimesheets() {
                   <tr key={d} onClick={() => !dim && openDay(d)} className={twMerge('tnum', dim ? 'text-subtle' : 'cursor-pointer hover:bg-canvas')}>
                         <td className="px-4 py-3 font-medium text-ink">{fmtDate(d, 'EEE d MMM')}</td>
                         <td className="px-4 py-3">{weekend ? '—' : '08:00–17:00'}</td>
-                        <td className="px-4 py-3">{t.firstStart !== undefined ? `${secToLabel(t.firstStart)}–${t.lastEnd && d !== TODAY ? secToLabel(t.lastEnd) : state.session.state === 'ended' ? secToLabel(t.lastEnd ?? clock) : 'now'}` : '—'}</td>
+                        <td className="px-4 py-3">{t.firstStart !== undefined ? `${secToLabel(t.firstStart)}–${t.lastEnd && d !== today ? secToLabel(t.lastEnd) : state.session.state === 'ended' ? secToLabel(t.lastEnd ?? clock) : 'now'}` : '—'}</td>
                         <td className="px-4 py-3">{t.work ? fmtHours(t.work) : '—'}</td>
                         <td className="px-4 py-3">{t.breaks ? fmtDur(t.breaks) : '—'}</td>
                         <td className="px-4 py-3">
@@ -147,7 +155,7 @@ export function MyTimesheets() {
         </>
       }
 
-      {view === 'month' && <MonthGrid onOpen={openDay} dayStatus={dayStatus} />}
+      {view === 'month' && <MonthGrid today={today} onOpen={openDay} dayStatus={dayStatus} />}
 
       {view === 'day' && <DayDetail date={date} onExplain={(iv) => setTarget({ mode: 'idle', interval: iv })} />}
 
@@ -156,44 +164,46 @@ export function MyTimesheets() {
 
 }
 
-function MonthGrid({ onOpen, dayStatus }: {onOpen: (d: string) => void;dayStatus: (d: string) => {label: string;tone: Tone;};}) {
+function MonthGrid({ today, onOpen, dayStatus }: {today: string;onOpen: (d: string) => void;dayStatus: (d: string) => {label: string;tone: Tone;};}) {
   const { state } = useDemo();
   const clock = useClock();
-  const cells: (string | null)[] = [null, null, null];
-  for (let i = 1; i <= 31; i++) cells.push(`2026-10-${String(i).padStart(2, '0')}`);
+  const firstDay = startOfMonth(parseISO(today));
+  const monthLength = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0).getDate();
+  const leadingDays = (getDay(firstDay) + 6) % 7;
+  const cells: (string | null)[] = [
+    ...Array.from({ length: leadingDays }, () => null),
+    ...Array.from({ length: monthLength }, (_, index) => format(addDays(firstDay, index), 'yyyy-MM-dd'))
+  ];
+  const monthHasData = cells.some((day) => day !== null && intervalsFor(state, actorId(state), day, false).length > 0);
   return (
     <div className="rounded-2xl border border-line bg-surface p-4">
-      <h2 className="mb-3 text-sm font-semibold text-ink">October 2026</h2>
+      <h2 className="mb-3 text-sm font-semibold text-ink">{format(firstDay, 'MMMM yyyy')}</h2>
       <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] text-muted">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => <div key={d} className="py-1 font-medium">{d}</div>)}
-        {cells.map((d, i) => {
-          if (!d) return <div key={`e${i}`} />;
-          const hist = octoberHistory[d];
-          const detailed = state.daySubmissions[d];
-          const t = detailed ? dayTotals(intervalsFor(state, actorId(state), d), clock) : null;
-          const weekend = i % 7 === 5 || i % 7 === 6;
-          const st = detailed ? dayStatus(d) : null;
-          const clickable = !!detailed && d <= TODAY;
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <div key={day} className="py-1 font-medium">{day}</div>)}
+        {cells.map((day, index) => {
+          if (!day) return <div key={`e${index}`} />;
+          const intervals = intervalsFor(state, actorId(state), day, false);
+          const hasData = intervals.length > 0;
+          const totals = hasData ? dayTotals(intervals, clock) : null;
+          const status = hasData ? dayStatus(day) : null;
+          const weekend = index % 7 === 5 || index % 7 === 6;
+          const clickable = hasData && day <= today;
           return (
             <button
-              key={d}
+              key={day}
               disabled={!clickable}
-              onClick={() => onOpen(d)}
-              className={twMerge('flex min-h-[64px] flex-col items-start rounded-lg border p-1.5 text-left', d === TODAY ? 'border-primary' : 'border-line', weekend && 'bg-canvas', clickable && 'hover:bg-hover')}>
-              
-              <span className="tnum text-[11px] font-medium text-ink">{Number(d.slice(-2))}</span>
-              {hist && <span className="tnum mt-auto text-[11px] text-ink">{hist.status === 'leave' ? hist.note : `${hist.hours.toFixed(1)} h`}</span>}
-              {hist && <span className={twMerge('text-[10px]', hist.status === 'leave' ? 'text-primary' : 'text-success')}>{hist.status === 'leave' ? 'Approved leave' : 'Approved'}</span>}
-              {t && st && <span className="tnum mt-auto text-[11px] text-ink">{(t.work / 3600).toFixed(1)} h</span>}
-              {t && st && <span className={twMerge('text-[10px]', st.tone === 'success' ? 'text-success' : st.tone === 'warning' ? 'text-warning' : 'text-muted')}>{st.label}</span>}
+              onClick={() => onOpen(day)}
+              className={twMerge('flex min-h-[64px] flex-col items-start rounded-lg border p-1.5 text-left', day === today ? 'border-primary' : 'border-line', weekend && 'bg-canvas', clickable && 'hover:bg-hover')}>
+              <span className="tnum text-[11px] font-medium text-ink">{Number(day.slice(-2))}</span>
+              {totals && <span className="tnum mt-auto text-[11px] text-ink">{(totals.work / 3600).toFixed(1)} h</span>}
+              {status && <span className={twMerge('text-[10px]', status.tone === 'success' ? 'text-success' : status.tone === 'warning' ? 'text-warning' : 'text-muted')}>{status.label}</span>}
             </button>);
-
         })}
       </div>
+      {!monthHasData && <p className="mt-4 text-center text-sm text-muted">No time records have been added this month.</p>}
     </div>);
 
 }
-
 function DayDetail({ date, onExplain }: {date: string;onExplain: Parameters<typeof DayIntervalList>[0]['onExplain'];}) {
   const { state } = useDemo();
   const clock = useClock();

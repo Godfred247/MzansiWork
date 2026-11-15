@@ -88,7 +88,7 @@ export function ReportDetail() {
 
         {rows.length === 0 ?
         <EmptyState icon={FileBarChartIcon} title="No rows for this filter" body="Try another status or a wider date range. The report itself is still available." /> :
-        <MSection title={`${rows.length} row${rows.length === 1 ? '' : 's'}`} footer="Demo figures for Karoo Digital. The download is a real CSV, Excel or PDF file for these rows.">
+        <MSection title={`${rows.length} row${rows.length === 1 ? '' : 's'}`} footer="Demo figures for Mzansi Work. The download is a real CSV, Excel or PDF file for these rows.">
             {rows.map((row, i) =>
           <MRow
             key={`${row[0]}-${i}`}

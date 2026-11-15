@@ -11,10 +11,11 @@ import { Skeleton } from '../../../components/shared/Skeleton';
 import { StatusBadge } from '../../../components/shared/StatusBadge';
 import { useDemo } from '../../../contexts/DemoStore';
 import { approverScope } from '../../../data/permissions';
-import { correctionLabels, leaveLabels, leaveTypeLabels } from '../../../data/statusLabels';
+import { correctionLabels, leaveLabels } from '../../../data/statusLabels';
+import { labelLeave } from '../../../utils/leavePolicy';
 import { useEmployerParams } from '../../../hooks/useEmployerParams';
 import { useSimulatedLoad } from '../../../hooks/useSimulatedLoad';
-import { inScope, viewerRoleLabel } from '../../../utils/permissions';
+import { seesMember, viewerRoleLabel } from '../../../utils/permissions';
 import { memberById } from '../../../utils/selectors';
 import { fmtDate } from '../../../utils/time';
 
@@ -28,8 +29,8 @@ export function Approvals() {
   const loading = useSimulatedLoad(400, tab);
   const role = state.viewerRole;
 
-  const corrections = state.corrections.filter((c) => inScope(role, c.memberId));
-  const leave = state.leave.filter((l) => inScope(role, l.memberId));
+  const corrections = state.corrections.filter((c) => seesMember(state, c.memberId));
+  const leave = state.leave.filter((l) => seesMember(state, l.memberId));
   const openCorrections = corrections.filter((c) => c.status === 'pending' || c.status === 'submitted' || c.status === 'info_requested');
   const openLeave = leave.filter((l) => l.status === 'pending' || l.status === 'info_requested');
   const shownCorrections = scope === 'open' ? openCorrections : corrections;
@@ -84,7 +85,7 @@ export function Approvals() {
                   key={l.id}
                   leading={<Avatar name={name} size="sm" />}
                   title={name}
-                  subtitle={`${leaveTypeLabels[l.type]} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')} · ${l.days} day${l.days === 1 ? '' : 's'}`}
+                  subtitle={`${labelLeave(state.leavePolicies, l.type)} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')} · ${l.days} day${l.days === 1 ? '' : 's'}`}
                   trailing={<StatusBadge tone={meta.tone} label={meta.label} />}
                   onClick={() => dispatch({ type: 'EMPLOYER_PUSH', route: { name: 'leave-request', params: { id: l.id } } })} />);
             })}

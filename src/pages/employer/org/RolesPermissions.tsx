@@ -9,7 +9,7 @@ import { Banner } from '../../../components/shared/Banner';
 import { Button } from '../../../components/shared/Button';
 import { SelectInput } from '../../../components/shared/SelectInput';
 import { useDemo } from '../../../contexts/DemoStore';
-import { accessLegend, approverScope, capabilities, managerGrants, permissionMatrix, type Access } from '../../../data/permissions';
+import { accessLegend, capabilities, managerGrants, permissionMatrix, type Access } from '../../../data/permissions';
 import type { Role } from '../../../types/org';
 import { can, viewerRoleLabel } from '../../../utils/permissions';
 
@@ -18,6 +18,57 @@ const roleOptions: {value: Role;label: string;}[] = [
 { value: 'approver', label: 'Delegated approver' },
 { value: 'manager', label: 'Manager' },
 { value: 'owner', label: 'Owner' }];
+
+function ApproverPicker() {
+  const { state, dispatch } = useDemo();
+  const people = state.members.filter((member) => member.status === 'active');
+  const subjects = people.filter((member) => member.role !== 'owner');
+  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '');
+  const subject = people.find((member) => member.id === subjectId);
+  const [approverId, setApproverId] = useState(state.approverFor[subjectId] ?? '');
+  const choices = people.filter((member) => member.id !== subjectId);
+  const assigned = Object.entries(state.approverFor).flatMap(([memberId, chosenId]) => {
+    const member = state.members.find((person) => person.id === memberId);
+    const approver = state.members.find((person) => person.id === chosenId);
+    return member && approver ? [{ member, approver }] : [];
+  });
+
+  const pickSubject = (id: string) => {
+    setSubjectId(id);
+    setApproverId(state.approverFor[id] ?? '');
+  };
+
+  if (subjects.length === 0) {
+    return (
+      <MSection title="Timesheet and leave approvers" footer="A manager is not chosen for you.">
+        <MRow title="No one to assign yet" subtitle="Once people join, choose who may approve each person’s timesheets and leave." chevron={false} />
+      </MSection>
+    );
+  }
+
+  return (
+    <MSection title="Timesheet and leave approvers" footer="This is not taken from someone’s job title or manager role. Leave it unset until you decide.">
+      <div className="space-y-3 p-4">
+        <SelectInput aria-label="Employee" value={subject?.id ?? ''} onChange={(event) => pickSubject(event.target.value)} options={subjects.map((member) => ({ value: member.id, label: member.name }))} />
+        <SelectInput
+          aria-label="Approver"
+          value={choices.some((member) => member.id === approverId) ? approverId : ''}
+          onChange={(event) => setApproverId(event.target.value)}
+          options={[{ value: '', label: 'Not chosen' }, ...choices.map((member) => ({ value: member.id, label: `${member.name} · ${member.role}` }))]} />
+        <Button
+          full
+          onClick={() => dispatch({ type: 'SET_APPROVER', memberId: subjectId, approverId: approverId || null })}>
+          Save approver
+        </Button>
+      </div>
+      {assigned.length === 0 ?
+      <MRow title="No approver chosen yet" subtitle="Timesheets and leave stay with the owner until you pick someone." chevron={false} /> :
+      assigned.map(({ member, approver }) =>
+      <MRow key={member.id} title={member.name} subtitle={`Approved by ${approver.name}`} chevron={false} />
+      )}
+    </MSection>
+  );
+}
 
 const accessTone: Record<Access, string> = {
   yes: 'text-success',
@@ -41,7 +92,7 @@ export function RolesPermissions() {
           <AccessDenied
             title="You cannot change roles"
             body="Role changes are limited to the account owner. A manager does not gain this by default, and nobody can read another person’s password."
-            attempted="PATCH /api/organisations/karoo/members/role"
+            attempted="PATCH /api/organisations/mzansiwork/members/role"
             role={viewerRoleLabel(state.viewerRole)} />
         </ScreenBody>
       </>);
@@ -60,9 +111,7 @@ export function RolesPermissions() {
         <Banner tone="info" title="Billing is never automatic">
           Making someone a manager does not let them change the plan, the card, or another person’s password. Billing stays with the owner unless you grant it explicitly.
         </Banner>
-        <MSection title="Delegated approver" footer={`Granted by ${approverScope.delegatedBy}. Scope ends ${approverScope.until}.`}>
-          <MRow title={approverScope.team} subtitle={`Can decide requests for ${approverScope.members.length} people in this team only.`} chevron={false} />
-        </MSection>
+        <ApproverPicker />
         <MSection title="Change a role">
           <div className="space-y-3 p-4">
             <SelectInput aria-label="Person" value={member.id} onChange={(e) => pick(e.target.value)} options={state.members.filter((m) => m.status === 'active').map((m) => ({ value: m.id, label: `${m.name} · ${m.role}` }))} />

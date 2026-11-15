@@ -13,7 +13,8 @@ import { Skeleton } from '../../../components/shared/Skeleton';
 import { StatusBadge } from '../../../components/shared/StatusBadge';
 import { useClock, useDemo } from '../../../contexts/DemoStore';
 import { weeklyHours } from '../../../data/dashboard';
-import { attendanceLabels, leaveTypeLabels } from '../../../data/statusLabels';
+import { attendanceLabels } from '../../../data/statusLabels';
+import { labelLeave } from '../../../utils/leavePolicy';
 import { useSimulatedLoad } from '../../../hooks/useSimulatedLoad';
 import type { Branch } from '../../../types/org';
 import { approverScope } from '../../../data/permissions';
@@ -148,8 +149,8 @@ export function Dashboard() {
             </MSection>
 
             <MSection title="Leave">
-              {outToday.map((l) => <MRow key={l.id} leading={<Avatar name={memberById(state, l.memberId)?.name ?? ''} size="sm" />} title={`${memberById(state, l.memberId)?.name} · out today`} subtitle={`${leaveTypeLabels[l.type]} until ${fmtDate(l.end, 'EEE d MMM')}`} />)}
-              {upcoming.map((l) => <MRow key={l.id} title={memberById(state, l.memberId)?.name} subtitle={`${leaveTypeLabels[l.type]} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')}`} trailing={<StatusBadge tone={l.status === 'approved' ? 'success' : 'warning'} label={l.status === 'approved' ? 'Approved' : 'Pending'} />} />)}
+              {outToday.map((l) => <MRow key={l.id} leading={<Avatar name={memberById(state, l.memberId)?.name ?? ''} size="sm" />} title={`${memberById(state, l.memberId)?.name} · out today`} subtitle={`${labelLeave(state.leavePolicies, l.type)} until ${fmtDate(l.end, 'EEE d MMM')}`} />)}
+              {upcoming.map((l) => <MRow key={l.id} title={memberById(state, l.memberId)?.name} subtitle={`${labelLeave(state.leavePolicies, l.type)} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')}`} trailing={<StatusBadge tone={l.status === 'approved' ? 'success' : 'warning'} label={l.status === 'approved' ? 'Approved' : 'Pending'} />} />)}
               <MRow title="Team leave calendar" onClick={() => dispatch({ type: 'EMPLOYER_PUSH', route: { name: 'leave' } })} />
             </MSection>
 

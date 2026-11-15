@@ -79,7 +79,7 @@ export function OnboardingDone() {
           <MRow title="Seats" subtitle="You + pending invitations" trailing={<span className="tnum text-sm text-ink">{used} used · {limit - used} available</span>} />
         </MSection>
         {invites.length > 0 &&
-        <MSection title="Invitations" footer="Each invitation is saved and reserves a seat. Email delivery stays queued until SendGrid is configured.">
+        <MSection title="Invitations" footer="Each invitation is saved and reserves a seat. No email is sent in this demo. The person opens employee sign-in, chooses Employee, and enters this address to create a password.">
             {invites.map((invite) => <MRow key={invite.email} title={invite.email} subtitle={invite.role} trailing={<StatusBadge tone="warning" label="Pending" />} />)}
           </MSection>
         }

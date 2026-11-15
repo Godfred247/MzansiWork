@@ -24,6 +24,7 @@ export type EmployerScreen =
 'emails' |
 'live' |
 'leave' |
+'leave-policy' |
 'projects' |
 'settings' |
 'policy' |

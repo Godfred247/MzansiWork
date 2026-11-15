@@ -31,6 +31,8 @@ export function uiReducer(s: DemoState, a: StampedAction): DemoState | null {
       return { ...s, employeeAuthed: true, employeeIssue: null, employeeRoute: { name: 'day' } };
     case 'EMPLOYEE_SIGN_OUT':
       return { ...s, employeeAuthed: false, employeeRoute: { name: 'signin' } };
+    case 'SET_EMPLOYEE_WORK_OPTIONS':
+      return { ...s, employeeWorkOptions: a.options, employeeWorkOptionsLoading: a.loading ?? false };
     case 'EMPLOYEE_ISSUE':
       return { ...s, employeeIssue: a.issue };
     case 'EMPLOYEE_VIEWPORT':

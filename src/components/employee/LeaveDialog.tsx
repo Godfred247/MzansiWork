@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { FileTextIcon, Loader2Icon, PaperclipIcon, XIcon } from 'lucide-react';
+import { ApiError, readToken } from '../../api/client';
+import { submitLeaveRequest } from '../../api/leave';
 import { useDemo } from '../../contexts/DemoStore';
 import { actorId, actorMember } from '../../utils/selectors';
 import { leaveTypeLabels } from '../../data/statusLabels';
 import type { LeaveType } from '../../types/time';
 import { leaveBreakdown, overlaps } from '../../utils/leave';
+import { labelLeave, shownBalances } from '../../utils/leavePolicy';
 import { fmtDate } from '../../utils/time';
+import { isLiveOrg } from '../../utils/workspace';
 import { Banner } from '../shared/Banner';
 import { Button } from '../shared/Button';
 import { Dialog } from '../shared/Dialog';
@@ -18,7 +22,7 @@ const types: LeaveType[] = ['annual', 'sick', 'family', 'study', 'parental', 'un
 
 export function LeaveDialog({ open, onClose }: {open: boolean;onClose: () => void;}) {
   const { state, dispatch } = useDemo();
-  const [type, setType] = useState<LeaveType>('annual');
+  const [type, setType] = useState('annual');
   const [start, setStart] = useState('2026-11-11');
   const [end, setEnd] = useState('2026-11-13');
   const [portion, setPortion] = useState<'full' | 'morning' | 'afternoon'>('full');
@@ -26,6 +30,12 @@ export function LeaveDialog({ open, onClose }: {open: boolean;onClose: () => voi
   const [contact, setContact] = useState('');
   const [doc, setDoc] = useState<'none' | 'uploading' | 'done'>('none');
   const [tried, setTried] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const livePolicy = isLiveOrg(state.orgId) && !state.flow && state.leavePolicies.length > 0;
+  const choices = livePolicy
+    ? state.leavePolicies.filter((policy) => policy.enabled).map((policy) => ({ value: policy.code, label: policy.name }))
+    : types.map((item) => ({ value: item, label: leaveTypeLabels[item] }));
 
   useEffect(() => {
     if (open) {setTried(false);setDoc('none');}
@@ -33,7 +43,7 @@ export function LeaveDialog({ open, onClose }: {open: boolean;onClose: () => voi
 
   const single = start === end;
   const b = leaveBreakdown(start, end, single ? portion : 'full');
-  const bal = state.balances.find((x) => x.type === type);
+  const bal = shownBalances(state, actorId(state)).find((item) => item.code === type);
   const own = state.leave.filter((l) => l.memberId === actorId(state) && (l.status === 'approved' || l.status === 'pending') && overlaps(l, { start, end }));
   const designIds = state.members.filter((m) => m.department === actorMember(state)?.department && m.id !== actorId(state)).map((m) => m.id);
   const team = state.leave.filter((l) => designIds.includes(l.memberId) && l.status === 'approved' && overlaps(l, { start, end }));
@@ -56,10 +66,27 @@ export function LeaveDialog({ open, onClose }: {open: boolean;onClose: () => voi
       <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button
+          loading={saving}
           onClick={() => {
             setTried(true);
             if (!valid || !b) return;
-            dispatch({ type: 'SUBMIT_LEAVE', payload: { type, start, end, days: b.working, portion: single ? portion : 'full', notes, contact: contact || undefined, document: doc === 'done' ? 'supporting-document.pdf' : undefined } });
+            const payload = { type, start, end, days: b.working, portion: single ? portion : 'full' as const, notes, contact: contact || undefined, document: doc === 'done' ? 'supporting-document.pdf' : undefined };
+            if (isLiveOrg(state.orgId) && !state.flow) {
+              const token = readToken('employee');
+              if (!token) {
+                setSubmitError('Sign in again before sending this request.');
+                return;
+              }
+              setSaving(true);
+              void submitLeaveRequest(token, { leaveType: type, start, end, days: b.working, notes }).then((row) => {
+                dispatch({ type: 'SUBMIT_LEAVE', id: row.id, payload });
+                onClose();
+              }).catch((caught: unknown) => {
+                setSubmitError(caught instanceof ApiError ? caught.message : 'The request was not saved.');
+              }).finally(() => setSaving(false));
+              return;
+            }
+            dispatch({ type: 'SUBMIT_LEAVE', payload });
             onClose();
           }}>
           
@@ -71,7 +98,7 @@ export function LeaveDialog({ open, onClose }: {open: boolean;onClose: () => voi
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Leave type" htmlFor="lv-type" hint={bal ? bal.available === null ? bal.note : `${bal.available} days available` : undefined}>
-            <SelectInput id="lv-type" value={type} onChange={(e) => setType(e.target.value as LeaveType)} options={types.map((t) => ({ value: t, label: leaveTypeLabels[t] }))} />
+            <SelectInput id="lv-type" value={type} onChange={(e) => setType(e.target.value)} options={choices.length ? choices : [{ value: '', label: 'No leave types yet' }]} />
           </Field>
           {single &&
           <Field label="Portion of day" htmlFor="lv-portion">
@@ -95,8 +122,10 @@ export function LeaveDialog({ open, onClose }: {open: boolean;onClose: () => voi
         }
         {b && b.holidays.length > 0 && <p className="text-xs text-muted">Public holidays not counted: {b.holidays.map((h) => `${h.name} (${fmtDate(h.date, 'd MMM')})`).join(', ')}.</p>}
         {tried && errors.balance && <Banner tone="danger" title="Not enough balance">{errors.balance} Choose fewer days or a different leave type.</Banner>}
-        {errors.overlap && <Banner tone="warning" title="Overlapping leave">{own.map((l) => `${leaveTypeLabels[l.type]} ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')} (${l.status})`).join(', ')}</Banner>}
-        {team.length > 0 && <Banner tone="info" title="A teammate is also away">{team.length} person in Design has approved leave during these dates. Your manager will see this when reviewing.</Banner>}
+        {errors.overlap && <Banner tone="warning" title="Overlapping leave">{own.map((l) => `${labelLeave(state.leavePolicies, l.type)} ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')} (${l.status})`).join(', ')}</Banner>}
+        {submitError && <Banner tone="danger" title="Request not saved">{submitError}</Banner>}
+        {livePolicy && choices.length === 0 && <Banner tone="warning" title="No leave types are switched on">Ask the owner to set the leave policy before you request leave.</Banner>}
+        {team.length > 0 && <Banner tone="info" title="A teammate is also away">{team.length} person in {actorMember(state)?.department ?? 'the team'} has approved leave during these dates. Your manager will see this when reviewing.</Banner>}
         {type === 'parental' && <Banner tone="warning" title="Eligibility awaiting HR verification">Parental leave rules have changed recently. HR will confirm your entitlement — submitting doesn’t guarantee eligibility.</Banner>}
 
         <Field label="Notes for your manager" htmlFor="lv-notes" optional hint="Please don’t include medical details — they aren’t needed.">

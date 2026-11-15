@@ -10,6 +10,7 @@ export type EventSource = 'browser' | 'agent' | 'server';
 
 export interface Interval {
   id: string;
+  seeded?: boolean;
   memberId: string;
   date: string;
   type: IntervalType;
@@ -100,10 +101,33 @@ export type LeaveType =
 'study';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'info_requested' | 'withdrawn';
 
+export interface LeavePolicy {
+  id: string;
+  code: string;
+  name: string;
+  enabled: boolean;
+  tracksDays: boolean;
+  grant: 'upfront' | 'monthly' | 'none';
+  allowanceDays: number | null;
+  monthlyDays: number | null;
+  cycle: 'year' | 'months36' | 'event';
+  cycleStart: string;
+  appliesTo: string;
+  note: string;
+  sort: number;
+}
+
+export interface LeaveOpening {
+  policyId: string;
+  userId: string;
+  openingDays: number;
+  asOf: string;
+}
+
 export interface LeaveRequest {
   id: string;
   memberId: string;
-  type: LeaveType;
+  type: string;
   start: string;
   end: string;
   days: number;

@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { LockIcon } from 'lucide-react';
+import { ApiError, api, readToken } from '../../api/client';
+import { loadLeaveSetup } from '../../api/leave';
 import { EmployeeSidebar } from '../../components/employee/EmployeeSidebar';
 import { EmployeeTopBar } from '../../components/employee/EmployeeTopBar';
 import { IssueBanner } from '../../components/employee/IssueBanner';
@@ -7,6 +10,8 @@ import { Button } from '../../components/shared/Button';
 import { ToastHost } from '../../components/shared/ToastHost';
 import { useDemo } from '../../contexts/DemoStore';
 import { useEmployeeLayout } from '../../contexts/EmployeeLayout';
+import { isLiveOrg } from '../../utils/workspace';
+import type { EmployeeWorkOptions } from '../../types/workspace';
 import { BrowserSignup, EmployeeAuth } from './EmployeeAuth';
 import { EmployeeNotifications } from './EmployeeNotifications';
 import { MyActivity } from './MyActivity';
@@ -17,9 +22,44 @@ import { MyTasks } from './MyTasks';
 import { MyTimesheets } from './MyTimesheets';
 import { TrackingPolicy } from './TrackingPolicy';
 
+const emptyWorkOptions: EmployeeWorkOptions = { projects: [], tasks: [], categories: [] };
+
 export function EmployeeApp() {
   const { state, dispatch } = useDemo();
   const layout = useEmployeeLayout();
+
+  useEffect(() => {
+    if (!state.employeeAuthed || !isLiveOrg(state.orgId) || state.flow) return;
+    let active = true;
+    const token = readToken('employee');
+    if (!token) {
+      dispatch({ type: 'SET_EMPLOYEE_WORK_OPTIONS', options: emptyWorkOptions });
+      dispatch({ type: 'TOAST', app: 'employee', message: 'Your sign-in has expired. Sign in again to load your saved work options.', tone: 'danger' });
+      return;
+    }
+
+    dispatch({ type: 'SET_EMPLOYEE_WORK_OPTIONS', options: emptyWorkOptions, loading: true });
+    void api<EmployeeWorkOptions>('/api/employee/work-options', { token })
+      .then((options) => {
+        if (active) dispatch({ type: 'SET_EMPLOYEE_WORK_OPTIONS', options });
+      })
+      .catch((caught: unknown) => {
+        if (!active) return;
+        dispatch({ type: 'SET_EMPLOYEE_WORK_OPTIONS', options: emptyWorkOptions });
+        dispatch({
+          type: 'TOAST',
+          app: 'employee',
+          message: caught instanceof ApiError ? caught.message : 'Your saved work options could not be loaded.',
+          tone: 'danger'
+        });
+      });
+
+    void loadLeaveSetup(token).then((setup) => {
+      if (active) dispatch({ type: 'SET_LEAVE_SETUP', ...setup, replaceOpenings: false });
+    }).catch(() => undefined);
+
+    return () => { active = false; };
+  }, [state.employeeAuthed, state.employeeMemberId, state.orgId, state.flow, dispatch]);
 
   if (!state.employeeAuthed) {
     return (

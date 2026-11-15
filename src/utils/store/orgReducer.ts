@@ -1,8 +1,10 @@
-import { leaveTypeLabels } from '../../data/statusLabels';
+import { leaveTypeName } from '../../data/statusLabels';
 import { THANDI_ID } from '../../data/members';
 import type { StampedAction } from '../../types/actions';
 import type { DemoState } from '../../types/demo';
-import { TODAY, addDays, fmtDate, secToLabel } from '../time';
+import { labelLeave } from '../leavePolicy';
+import { TODAY, addDays, fmtDate, johannesburgNow, secToLabel } from '../time';
+import { isLiveOrg } from '../workspace';
 import { viewerName } from '../permissions';
 import { getPlan, planLimit, planRank, priceFor, fmtZAR } from '../pricing';
 import { checkInvite, seatUsage } from '../seats';
@@ -11,7 +13,16 @@ import { addAudit, addFeed, addToast, notify, uid } from './helpers';
 export function orgReducer(s: DemoState, a: StampedAction): DemoState | null {
   const now = a.now;
   const actor = viewerName(s.viewerRole);
+  const leaveName = (type: string) => labelLeave(s.leavePolicies, type) || leaveTypeName(type);
   switch (a.type) {
+    case 'SET_LEAVE_SETUP':{
+        const incoming = a.requests;
+        const leave = incoming ? [...s.leave.filter((item) => !incoming.some((row) => row.id === item.id)), ...incoming] : s.leave;
+        const openings = a.replaceOpenings === false
+          ? [...s.leaveOpenings.filter((opening) => !a.openings.some((row) => row.policyId === opening.policyId && row.userId === opening.userId)), ...a.openings]
+          : a.openings;
+        return { ...s, leavePolicies: a.policies, leaveOpenings: openings, leave };
+      }
     case 'SEND_INVITE':{
         const check = checkInvite(a.email, s);
         if (!check.ok) return addToast(s, 'employer', check.message, 'danger');
@@ -94,6 +105,22 @@ export function orgReducer(s: DemoState, a: StampedAction): DemoState | null {
         let n: DemoState = { ...s, members: s.members.map((x) => x.id === a.id ? { ...x, role: a.role } : x) };
         n = addAudit(n, { actor, action: `Changed role ${m.role} → ${a.role}`, target: m.name, category: 'role' }, now);
         return addToast(n, 'employer', 'Role updated. Billing access is never granted automatically.', 'success');
+      }
+    case 'SET_APPROVER':{
+        const person = s.members.find((x) => x.id === a.memberId);
+        if (!person || a.approverId === person.id) return s;
+        const approverFor = { ...s.approverFor };
+        if (a.approverId) approverFor[a.memberId] = a.approverId;
+        else delete approverFor[a.memberId];
+        const approver = a.approverId ? s.members.find((x) => x.id === a.approverId) : undefined;
+        let n: DemoState = { ...s, approverFor };
+        n = addAudit(n, {
+          actor,
+          action: approver ? `Chose ${approver.name} to approve timesheets and leave` : 'Cleared the timesheet and leave approver',
+          target: person.name,
+          category: 'role'
+        }, now);
+        return addToast(n, 'employer', approver ? `${approver.name} will approve ${person.name}.` : `No approver chosen for ${person.name}.`, 'success');
       }
     case 'CHANGE_PLAN':{
         const cur = s.subscription;
@@ -188,9 +215,10 @@ export function orgReducer(s: DemoState, a: StampedAction): DemoState | null {
         const p = a.payload;
         const employeeId = s.employeeMemberId || THANDI_ID;
         const employeeName = s.members.find((m) => m.id === employeeId)?.name ?? 'Employee';
-        let n: DemoState = { ...s, leave: [{ id: uid('l'), memberId: employeeId, ...p, status: 'pending', submitted: TODAY }, ...s.leave] };
-        n = notify(n, 'employer', `Leave request from ${employeeName}`, `${leaveTypeLabels[p.type]} · ${fmtDate(p.start, 'd MMM')}–${fmtDate(p.end, 'd MMM')} · ${p.days} day${p.days === 1 ? '' : 's'}`, 'warning', now);
-        n = addAudit(n, { actor: employeeName, action: 'Submitted leave request', target: `${leaveTypeLabels[p.type]} ${fmtDate(p.start, 'd MMM')}`, category: 'leave' }, now);
+        const submitted = isLiveOrg(s.orgId) && !s.flow ? johannesburgNow().iso : TODAY;
+        let n: DemoState = { ...s, leave: [{ id: a.id ?? uid('l'), memberId: employeeId, ...p, status: 'pending', submitted }, ...s.leave] };
+        n = notify(n, 'employer', `Leave request from ${employeeName}`, `${leaveName(p.type)} · ${fmtDate(p.start, 'd MMM')}–${fmtDate(p.end, 'd MMM')} · ${p.days} day${p.days === 1 ? '' : 's'}`, 'warning', now);
+        n = addAudit(n, { actor: employeeName, action: 'Submitted leave request', target: `${leaveName(p.type)} ${fmtDate(p.start, 'd MMM')}`, category: 'leave' }, now);
         n = addFeed(n, 'employee', `${employeeName.split(' ')[0]} requested leave → Approvals inbox +1 on employer app`, now);
         return addToast(n, 'employee', 'Leave request submitted', 'success');
       }
@@ -202,16 +230,16 @@ export function orgReducer(s: DemoState, a: StampedAction): DemoState | null {
         const l = s.leave.find((x) => x.id === a.id);
         if (!l) return s;
         let n: DemoState = { ...s, leave: s.leave.map((x) => x.id === a.id ? { ...x, status: a.decision, reviewer: actor, decisionReason: a.reason || undefined } : x) };
-        if (a.decision === 'approved' && l.memberId === (s.employeeMemberId || THANDI_ID)) {
+        if (a.decision === 'approved' && s.leavePolicies.length === 0 && l.memberId === (s.employeeMemberId || THANDI_ID)) {
           n = { ...n, balances: n.balances.map((b) => b.type === l.type && b.available !== null ? { ...b, available: b.available - l.days, used: b.used + l.days } : b) };
         }
         const m = s.members.find((x) => x.id === l.memberId);
         const verb = a.decision === 'approved' ? 'Approved' : a.decision === 'rejected' ? 'Rejected' : 'Requested more information on';
-        n = addAudit(n, { actor, action: `${verb} leave`, target: `${m?.name} · ${leaveTypeLabels[l.type]} ${fmtDate(l.start, 'd MMM')}`, reason: a.reason || undefined, category: 'leave' }, now);
+        n = addAudit(n, { actor, action: `${verb} leave`, target: `${m?.name} · ${leaveName(l.type)} ${fmtDate(l.start, 'd MMM')}`, reason: a.reason || undefined, category: 'leave' }, now);
         n = addFeed(n, 'employer', `${actor} ${verb.toLowerCase()} ${m?.name.split(' ')[0]}’s leave`, now);
         if (l.memberId === (s.employeeMemberId || THANDI_ID)) {
           const title = a.decision === 'approved' ? 'Leave approved' : a.decision === 'rejected' ? 'Leave not approved' : 'More information requested on leave';
-          n = notify(n, 'employee', title, `${leaveTypeLabels[l.type]} ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')}${a.reason ? ` — “${a.reason}”` : ''}`, a.decision === 'approved' ? 'success' : a.decision === 'rejected' ? 'danger' : 'info', now);
+          n = notify(n, 'employee', title, `${leaveName(l.type)} ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')}${a.reason ? ` — “${a.reason}”` : ''}`, a.decision === 'approved' ? 'success' : a.decision === 'rejected' ? 'danger' : 'info', now);
           n = addToast(n, 'employee', title, a.decision === 'approved' ? 'success' : a.decision === 'rejected' ? 'danger' : 'info');
         }
         return addToast(n, 'employer', `${verb} · employee notified`, 'success');

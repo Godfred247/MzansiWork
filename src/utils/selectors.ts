@@ -3,7 +3,12 @@ import type { DemoState } from '../types/demo';
 import type { Member, ViewerRole } from '../types/org';
 import type { Interval } from '../types/time';
 import { inScope } from './permissions';
-import { TODAY, labelToSec, secToLabel } from './time';
+import { isLiveOrg } from './workspace';
+import { TODAY, johannesburgNow, labelToSec, secToLabel } from './time';
+
+export function currentWorkDate(s: Pick<DemoState, 'orgId' | 'flow'>): string {
+  return isLiveOrg(s.orgId) && !s.flow ? johannesburgNow().iso : TODAY;
+}
 
 export function actorId(s: DemoState): string {
   return s.employeeMemberId || THANDI_ID;
@@ -18,8 +23,8 @@ export function memberById(s: DemoState, id: string): Member | undefined {
 }
 
 /** Server-visible intervals (queued agent observations have not reached the server yet). */
-export function intervalsFor(s: DemoState, memberId: string, date: string): Interval[] {
-  return s.intervals.filter((i) => i.memberId === memberId && i.date === date && !i.queued).sort((a, b) => a.startSec - b.startSec);
+export function intervalsFor(s: DemoState, memberId: string, date: string, includeSeeded = true): Interval[] {
+  return s.intervals.filter((i) => i.memberId === memberId && i.date === date && !i.queued && (includeSeeded || !i.seeded)).sort((a, b) => a.startSec - b.startSec);
 }
 
 export interface DayTotals {
@@ -63,13 +68,14 @@ export function dayTotals(ivs: Interval[], now: number): DayTotals {
 }
 
 export function thandiLive(s: DemoState, base: Member, now: number): Member {
-  const ivs = intervalsFor(s, actorId(s), TODAY);
+  const today = currentWorkDate(s);
+  const ivs = intervalsFor(s, actorId(s), today);
   const tot = dayTotals(ivs, now);
   const se = s.session;
   const attendance =
   se.state === 'clocked_in' ? 'clocked_in' : se.state === 'on_break' ? 'on_break' : se.state === 'ended' ? 'clocked_out' : 'not_clocked_in';
   const p = s.projects.find((x) => x.id === se.projectId);
-  const hasPending = s.corrections.some((c) => c.memberId === actorId(s) && c.date === TODAY && c.status === 'pending');
+  const hasPending = s.corrections.some((c) => c.memberId === actorId(s) && c.date === today && c.status === 'pending');
   return {
     ...base,
     attendance: hasPending && attendance !== 'on_break' ? 'pending_correction' : attendance,
@@ -89,12 +95,13 @@ export function liveMembers(s: DemoState, now: number, includeInactive = false):
 }
 
 export function memberDayIntervals(s: DemoState, m: Member, now: number): Interval[] {
-  const ivs = intervalsFor(s, m.id, TODAY);
+  const today = currentWorkDate(s);
+  const ivs = intervalsFor(s, m.id, today);
   if (ivs.length || m.id === actorId(s) || !m.clockIn || m.attendance === 'missing_clock_out') return ivs;
   const start = labelToSec(m.clockIn);
   const end = m.attendance === 'clocked_out' ? start + Math.round(m.hoursToday * 3600) : undefined;
   if (start > now) return [];
-  return [{ id: `syn-${m.id}`, memberId: m.id, date: TODAY, type: 'work', startSec: start, endSec: end, status: 'recorded', source: 'browser' }];
+  return [{ id: `syn-${m.id}`, memberId: m.id, date: today, type: 'work', startSec: start, endSec: end, status: 'recorded', source: 'browser' }];
 }
 
 export function pendingCorrections(s: DemoState, role: ViewerRole) {

@@ -12,7 +12,7 @@ export function BillingRestricted() {
       <AccessDenied
         title="Billing is managed by the account owner"
         body="Plan changes, payment details and invoices are only available to Lerato Mokoena (owner). Billing access is never granted automatically to managers — the owner can delegate it explicitly."
-        attempted="GET /api/organisations/karoo/subscription"
+        attempted="GET /api/organisations/mzansiwork/subscription"
         role={`${viewerRoleLabel(state.viewerRole)} — no billing permission`} />
       
       <MSection title="Seat availability (read-only)" footer="Shown so you know whether you can invite someone. Ask the owner if more seats are needed.">

@@ -7,10 +7,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Organisation> Organisations => Set<Organisation>();
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<EmployeeWorkOptionsRecord> EmployeeWorkOptions => Set<EmployeeWorkOptionsRecord>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<SubscriptionRecord> Subscriptions => Set<SubscriptionRecord>();
     public DbSet<CorrectionRequest> Corrections => Set<CorrectionRequest>();
     public DbSet<LeaveRequestRecord> LeaveRequests => Set<LeaveRequestRecord>();
+    public DbSet<LeavePolicyRecord> LeavePolicies => Set<LeavePolicyRecord>();
+    public DbSet<LeaveOpeningRecord> LeaveOpenings => Set<LeaveOpeningRecord>();
     public DbSet<AgentEvent> AgentEvents => Set<AgentEvent>();
     public DbSet<AuditRecord> Audit => Set<AuditRecord>();
     public DbSet<EmailMessage> Emails => Set<EmailMessage>();
@@ -20,21 +23,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         modelBuilder.HasDefaultSchema("mzansi");
         OrganisationLink<AppUser>(modelBuilder);
+        modelBuilder.Entity<EmployeeWorkOptionsRecord>().HasKey(x => new { x.OrganisationId, x.UserId });
         OrganisationLink<Invitation>(modelBuilder);
         OrganisationLink<SubscriptionRecord>(modelBuilder);
         OrganisationLink<CorrectionRequest>(modelBuilder);
         OrganisationLink<LeaveRequestRecord>(modelBuilder);
+        OrganisationLink<LeavePolicyRecord>(modelBuilder);
+        OrganisationLink<LeaveOpeningRecord>(modelBuilder);
         OrganisationLink<AgentEvent>(modelBuilder);
         OrganisationLink<AuditRecord>(modelBuilder);
         OrganisationLink<EmailMessage>(modelBuilder);
         OrganisationLink<ExportRecord>(modelBuilder);
         UserLink<CorrectionRequest>(modelBuilder);
         UserLink<LeaveRequestRecord>(modelBuilder);
+        UserLink<LeaveOpeningRecord>(modelBuilder);
         UserLink<AgentEvent>(modelBuilder);
         modelBuilder.Entity<AppUser>().HasIndex(x => new { x.OrganisationId, x.Email }).IsUnique();
         modelBuilder.Entity<AgentEvent>().HasIndex(x => new { x.OrganisationId, x.IdempotencyKey }).IsUnique();
         modelBuilder.Entity<SubscriptionRecord>().Property(x => x.AmountDue).HasPrecision(12, 2);
         modelBuilder.Entity<LeaveRequestRecord>().Property(x => x.Days).HasPrecision(6, 2);
+        modelBuilder.Entity<LeavePolicyRecord>().Property(x => x.AllowanceDays).HasPrecision(6, 2);
+        modelBuilder.Entity<LeavePolicyRecord>().Property(x => x.MonthlyDays).HasPrecision(6, 2);
+        modelBuilder.Entity<LeavePolicyRecord>().HasIndex(x => new { x.OrganisationId, x.Code }).IsUnique();
+        modelBuilder.Entity<LeaveOpeningRecord>().Property(x => x.OpeningDays).HasPrecision(6, 2);
+        modelBuilder.Entity<LeaveOpeningRecord>().HasIndex(x => new { x.OrganisationId, x.UserId, x.PolicyId }).IsUnique();
     }
 
     private static void OrganisationLink<T>(ModelBuilder modelBuilder) where T : class =>

@@ -3,8 +3,9 @@ import type { ExportFormat, Frequency, PlanId } from './billing';
 import type { DemoState, EmployeeIssue, EmployeeViewport } from './demo';
 import type { EmployeeRoute, EmployerRoute, EmployerTab, FlowId } from './nav';
 import type { AppId, AuditCategory, Branch, Role, Tone, ViewerRole } from './org';
-import type { CorrectionKind, LeaveType, Project } from './time';
+import type { CorrectionKind, LeaveOpening, LeavePolicy, LeaveRequest, Project } from './time';
 import type { WorkspaceSnapshot } from './workspace';
+import type { EmployeeWorkOptions } from './workspace';
 
 export interface CorrectionPayload {
   kind: CorrectionKind;
@@ -20,7 +21,7 @@ export interface CorrectionPayload {
 }
 
 export interface LeavePayload {
-  type: LeaveType;
+  type: string;
   start: string;
   end: string;
   days: number;
@@ -48,6 +49,7 @@ export type DemoAction =
 {type: 'EMPLOYEE_NAV';route: EmployeeRoute;} |
 {type: 'EMPLOYEE_SIGN_IN';} |
 {type: 'EMPLOYEE_SIGN_OUT';} |
+{type: 'SET_EMPLOYEE_WORK_OPTIONS';options: EmployeeWorkOptions;loading?: boolean;} |
 {type: 'EMPLOYEE_ISSUE';issue: EmployeeIssue;} |
 {type: 'EMPLOYEE_VIEWPORT';viewport: EmployeeViewport;} |
 {type: 'SET_ROLE';role: ViewerRole;} |
@@ -62,7 +64,8 @@ export type DemoAction =
 {type: 'WITHDRAW_CORRECTION';id: string;} |
 {type: 'REVIEW_CORRECTION';id: string;decision: 'approved' | 'rejected' | 'info_requested';reason: string;} |
 {type: 'RESPOND_INFO';id: string;note: string;} |
-{type: 'SUBMIT_LEAVE';payload: LeavePayload;} |
+{type: 'SUBMIT_LEAVE';payload: LeavePayload;id?: string;} |
+{type: 'SET_LEAVE_SETUP';policies: LeavePolicy[];openings: LeaveOpening[];requests?: LeaveRequest[];replaceOpenings?: boolean;} |
 {type: 'WITHDRAW_LEAVE';id: string;} |
 {type: 'REVIEW_LEAVE';id: string;decision: 'approved' | 'rejected' | 'info_requested';reason: string;} |
 {type: 'SEND_INVITE';email: string;role: Role;department: string;branch: Branch;} |
@@ -74,6 +77,7 @@ export type DemoAction =
 {type: 'DEACTIVATE_MEMBER';id: string;reason: string;} |
 {type: 'REACTIVATE_MEMBER';id: string;} |
 {type: 'CHANGE_ROLE';id: string;role: Role;} |
+{type: 'SET_APPROVER';memberId: string;approverId: string | null;} |
 {type: 'CHANGE_PLAN';planId: PlanId;frequency: Frequency;users?: number;} |
 {type: 'SCHEDULE_FREQUENCY';frequency: Frequency;} |
 {type: 'CANCEL_SCHEDULED';} |

@@ -29,6 +29,7 @@ public class AuthController(AppDbContext db, TokenService tokens, ILogger<AuthCo
         string? StandardHours,
         List<RegisterInvite>? Invites);
     public record AcceptRequest(string Email, string FullName, string Password);
+    public record InvitationLookupRequest(string Email);
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request)
@@ -138,6 +139,36 @@ public class AuthController(AppDbContext db, TokenService tokens, ILogger<AuthCo
         await transaction.CommitAsync();
         log.LogInformation("Created organisation {Organisation} for {Email} on {Plan} {Frequency} with {Invites} invitations", org.Name, email, request.PlanId, request.Frequency, invites.Count);
         return Ok(new { token = tokens.Create(owner), user = new { owner.Id, owner.FullName, owner.Email, owner.Role, owner.BillingAccess }, organisation = new { org.Id, org.Name } });
+    }
+
+    [HttpPost("invitation")]
+    public async Task<IActionResult> Invitation(InvitationLookupRequest request)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (!email.Contains('@') || email.Length < 6) return BadRequest(new { message = "Enter a valid work email." });
+        if (await db.Users.AnyAsync(x => x.Email == email && x.Status == "active"))
+            return Ok(new { status = "account" });
+
+        var now = DateTimeOffset.UtcNow;
+        var invites = await db.Invitations.Where(x => x.Email == email).OrderByDescending(x => x.SentAt).ToListAsync();
+        var pending = invites.FirstOrDefault(x => x.Status == "pending" && x.ExpiresAt > now);
+        if (pending is not null)
+        {
+            var org = await db.Organisations.FindAsync(pending.OrganisationId);
+            return Ok(new
+            {
+                status = "pending",
+                organisationName = org?.Name ?? "Your organisation",
+                role = pending.Role,
+                department = pending.Department,
+                branch = pending.Branch,
+                expiresAt = pending.ExpiresAt
+            });
+        }
+
+        if (invites.Any(x => x.Status == "pending")) return Ok(new { status = "expired" });
+        if (invites.Any(x => x.Status == "cancelled")) return Ok(new { status = "cancelled" });
+        return Ok(new { status = "none" });
     }
 
     [HttpPost("accept-invitation")]

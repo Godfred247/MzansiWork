@@ -23,7 +23,7 @@ function buildCsv(report: ReportDef, rows: (string | number)[][], range: string)
     `# ${report.name}`,
     `# Data type: ${report.dataType}`,
     `# Range: ${range}`,
-    `# Organisation: Karoo Digital (Pty) Ltd`,
+    `# Organisation: Mzansi Work (Pty) Ltd`,
     report.columns.map(csvCell).join(','),
     ...rows.map((row) => row.map(csvCell).join(','))
   ];
@@ -46,7 +46,7 @@ function buildExcel(report: ReportDef, rows: (string | number)[][], range: strin
 <Worksheet ss:Name="${xml(report.name).slice(0, 31)}">
 <Table>
 <Row><Cell><Data ss:Type="String">${xml(report.name)} — ${xml(report.dataType)}</Data></Cell></Row>
-<Row><Cell><Data ss:Type="String">${xml(range)} · Karoo Digital (Pty) Ltd</Data></Cell></Row>
+<Row><Cell><Data ss:Type="String">${xml(range)} · Mzansi Work (Pty) Ltd</Data></Cell></Row>
 <Row>${header}</Row>
 ${body}
 </Table>
@@ -63,7 +63,7 @@ function buildPdf(report: ReportDef, rows: (string | number)[][], range: string)
     report.name,
     `Data type: ${report.dataType}`,
     `Range: ${range}`,
-    'Karoo Digital (Pty) Ltd',
+    'Mzansi Work (Pty) Ltd',
     '',
     report.columns.join('  |  '),
     ...rows.map((row) => row.join('  |  '))

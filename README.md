@@ -1,6 +1,6 @@
 # MzansiWork
 
-South African workforce management prototype for employers, employees, and an optional Windows desktop agent. The three experiences share one demo organisation, Karoo Digital, so a change in one place shows up in the others.
+South African workforce management prototype for employers, employees, and an optional Windows desktop agent. The three experiences share one demo organisation, Mzansi Work, so a change in one place shows up in the others.
 
 ## Run from Visual Studio Code
 
@@ -34,7 +34,7 @@ dotnet user-secrets set "Supabase:DbPassword" "YOUR_DATABASE_PASSWORD" --project
 
 Copy that password from the Supabase dashboard: Connect, then Session pooler. If the host in `appsettings.json` does not match the dashboard, use the host shown there.
 
-Demo sign-in: `lerato@karoodigital.co.za` / `Password123` (owner) and `thandi@karoodigital.co.za` / `Password123` (employee). A plan change is rejected unless `confirm` is true. Seat limits block invitations. Agent events with the same idempotency key are skipped.
+Demo sign-in: `lerato@mzansiwork.co.za` / `Password123` (owner) and `thandi@mzansiwork.co.za` / `Password123` (employee). A plan change is rejected unless `confirm` is true. Seat limits block invitations. Agent events with the same idempotency key are skipped.
 
 ## Employer mobile app
 

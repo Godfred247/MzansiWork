@@ -2,7 +2,8 @@ import type { AgentState } from './agent';
 import type { ExportJob, Subscription } from './billing';
 import type { EmployeeRoute, EmployerRoute, FlowId } from './nav';
 import type { AppId, AppNotification, AuditEntry, Branch, Invitation, Member, Tone, ViewerRole } from './org';
-import type { Correction, Interval, LeaveBalance, LeaveRequest, Project, Session, TimeEvent } from './time';
+import type { Correction, Interval, LeaveBalance, LeaveOpening, LeavePolicy, LeaveRequest, Project, Session, TimeEvent } from './time';
+import type { EmployeeWorkOptions } from './workspace';
 
 export interface Toast {
   id: string;
@@ -42,6 +43,8 @@ export interface DemoState {
   employeeIssue: EmployeeIssue;
   employeeViewport: EmployeeViewport;
   members: Member[];
+  /** member id → the person the owner chose to approve that member's timesheets and leave */
+  approverFor: Record<string, string>;
   invitations: Invitation[];
   lastInviteId?: string;
   session: Session;
@@ -50,8 +53,12 @@ export interface DemoState {
   corrections: Correction[];
   daySubmissions: Record<string, 'open' | 'submitted' | 'approved'>;
   leave: LeaveRequest[];
+  leavePolicies: LeavePolicy[];
+  leaveOpenings: LeaveOpening[];
   balances: LeaveBalance[];
   projects: Project[];
+  employeeWorkOptions: EmployeeWorkOptions;
+  employeeWorkOptionsLoading: boolean;
   subscription: Subscription;
   exports: ExportJob[];
   audit: AuditEntry[];

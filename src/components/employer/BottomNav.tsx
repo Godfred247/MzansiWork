@@ -19,7 +19,9 @@ const tabOf: Partial<Record<EmployerScreen, EmployerTab>> = {
   invite: 'employees',
   seats: 'employees',
   correction: 'approvals',
-  'leave-request': 'approvals'
+  'leave-request': 'approvals',
+  leave: 'more',
+  'leave-policy': 'more'
 };
 
 export function BottomNav() {

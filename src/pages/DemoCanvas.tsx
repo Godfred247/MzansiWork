@@ -50,7 +50,7 @@ export function DemoCanvas() {
   const show = (id: AppId) => single === null || single === id;
 
   return (
-    <div className="flex h-screen w-full flex-col bg-[#E8EDF4]">
+    <div className="flex h-screen w-full flex-col bg-canvas">
       <TopBar />
       {state.view === 'docs' ?
       <DocsView /> :

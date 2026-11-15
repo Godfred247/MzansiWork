@@ -51,3 +51,20 @@ export interface WorkspaceSnapshot {
     billingAccess: boolean;
   };
 }
+
+export interface EmployeeWorkProject {
+  id: string;
+  name: string;
+}
+
+export interface EmployeeWorkTask {
+  id: string;
+  projectId: string;
+  name: string;
+}
+
+export interface EmployeeWorkOptions {
+  projects: EmployeeWorkProject[];
+  tasks: EmployeeWorkTask[];
+  categories: string[];
+}

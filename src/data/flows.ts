@@ -30,9 +30,9 @@ export const flows: Flow[] = [
 {
   id: 'B', title: 'Employee invitation', summary: 'Invite → seat check → invitation sent → employee accepts → joins.',
   steps: [
-  { app: 'employer', text: 'Enter a new email (e.g. naledi@karoodigital.co.za) and send the invitation.', advanceOn: { type: 'SEND_INVITE' } },
+  { app: 'employer', text: 'Enter a new email (e.g. naledi@mzansiwork.co.za) and send the invitation.', advanceOn: { type: 'SEND_INVITE' } },
   { app: 'employee', text: 'The invitation link opens in the browser. Click “Accept invitation”.', advanceOn: { type: 'EMPLOYEE_NAV', route: 'setup' } },
-  { app: 'employee', text: 'Set a name and password, then join Karoo Digital.', advanceOn: { type: 'ACCEPT_INVITE' } },
+  { app: 'employee', text: 'Set a name and password, then join Mzansi Work.', advanceOn: { type: 'ACCEPT_INVITE' } },
   { app: 'employer', text: 'Back in Employees → Invitations, the status is now Accepted and the seat moved from reserved to active.' }]
 
 },

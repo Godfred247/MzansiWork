@@ -9,6 +9,7 @@ import { fmtClock } from '../../utils/time';
 import { IconButton } from '../shared/IconButton';
 import { Logo } from '../shared/Logo';
 import { EmployeeNavIcon } from './EmployeeNavIcon';
+import { EmployeeAccountControls } from './EmployeeAccountControls';
 
 export function EmployeeTopBar() {
   const { state, dispatch } = useDemo();
@@ -73,7 +74,10 @@ export function EmployeeTopBar() {
                   </li>
               )}
               </ul>
-              <p className="mt-auto border-t border-line px-4 py-3 text-xs text-muted">{me?.name ?? 'Not signed in'} · {state.org.name || 'No organisation'}</p>
+              <div className="mt-auto border-t border-line px-3 py-3">
+                <p className="mb-2 px-1 text-xs text-muted">{me?.name ?? 'Not signed in'} · {state.org.name || 'No organisation'}</p>
+                <EmployeeAccountControls />
+              </div>
             </motion.nav>
           </div>
         }

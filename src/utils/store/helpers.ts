@@ -2,6 +2,7 @@ import { THANDI_ID } from '../../data/members';
 import type { DemoState } from '../../types/demo';
 import type { AppId, AuditEntry, Tone } from '../../types/org';
 import type { EventKind, EventSource, Interval, TimeEvent } from '../../types/time';
+import { currentWorkDate } from '../selectors';
 import { TODAY, secToLabel } from '../time';
 
 let counter = 0;
@@ -16,22 +17,22 @@ export function addFeed(s: DemoState, app: AppId, text: string, now: number): De
 }
 
 export function addAudit(s: DemoState, e: Omit<AuditEntry, 'id' | 'date' | 'time'>, now: number): DemoState {
-  return { ...s, audit: [{ ...e, id: uid('a'), date: TODAY, time: secToLabel(now) }, ...s.audit] };
+  return { ...s, audit: [{ ...e, id: uid('a'), date: currentWorkDate(s), time: secToLabel(now) }, ...s.audit] };
 }
 
 export function notify(s: DemoState, app: 'employer' | 'employee', title: string, body: string, tone: Tone, now: number): DemoState {
   return {
     ...s,
-    notifications: [{ id: uid('n'), app, title, body, tone, date: TODAY, time: secToLabel(now), read: false }, ...s.notifications]
+    notifications: [{ id: uid('n'), app, title, body, tone, date: currentWorkDate(s), time: secToLabel(now), read: false }, ...s.notifications]
   };
 }
 
-export function makeEvent(kind: EventKind, now: number, source: EventSource, detail: string, synced = true, memberId = THANDI_ID): TimeEvent {
-  return { id: uid('ev'), memberId, date: TODAY, sec: now, kind, source, detail, synced };
+export function makeEvent(kind: EventKind, now: number, source: EventSource, detail: string, synced = true, memberId = THANDI_ID, date = TODAY): TimeEvent {
+  return { id: uid('ev'), memberId, date, sec: now, kind, source, detail, synced };
 }
 
 export function addEvent(s: DemoState, kind: EventKind, now: number, source: EventSource, detail: string): DemoState {
-  return { ...s, events: [...s.events, makeEvent(kind, now, source, detail, true, s.employeeMemberId || THANDI_ID)] };
+  return { ...s, events: [...s.events, makeEvent(kind, now, source, detail, true, s.employeeMemberId || THANDI_ID, currentWorkDate(s))] };
 }
 
 export function patchInterval(s: DemoState, id: string | undefined, patch: Partial<Interval>): DemoState {

@@ -3,7 +3,8 @@ import { trackingPolicy } from '../../data/policy';
 import type { StampedAction } from '../../types/actions';
 import type { DemoState } from '../../types/demo';
 import type { EventKind, Interval } from '../../types/time';
-import { TODAY, fmtDate, fmtDur, range, secToLabel } from '../time';
+import { fmtDate, fmtDur, range, secToLabel } from '../time';
+import { currentWorkDate } from '../selectors';
 import { viewerName } from '../permissions';
 import { addAudit, addEvent, addFeed, addToast, closeInterval, makeEvent, notify, patchInterval, uid } from './helpers';
 
@@ -11,17 +12,21 @@ export function taskText(s: DemoState, pid?: string, tid?: string, cat?: string)
   const p = s.projects.find((x) => x.id === pid);
   const t = p?.tasks.find((x) => x.id === tid);
   if (p && t) return `${p.name} · ${t.name}`;
+  const personalProject = s.employeeWorkOptions.projects.find((x) => x.id === pid);
+  const personalTask = s.employeeWorkOptions.tasks.find((x) => x.id === tid);
+  if (personalTask) return `${p?.name ?? personalProject?.name ?? 'Project'} · ${personalTask.name}`;
   if (p) return p.name;
+  if (personalProject) return personalProject.name;
   return cat || 'No task selected';
 }
 
-function workInterval(memberId: string, id: string, now: number, pid?: string, tid?: string, cat?: string): Interval {
-  return { id, memberId, date: TODAY, type: 'work', startSec: now, projectId: pid, taskId: tid, category: cat, status: 'recorded', source: 'browser' };
+function workInterval(memberId: string, id: string, now: number, date: string, pid?: string, tid?: string, cat?: string): Interval {
+  return { id, memberId, date, type: 'work', startSec: now, projectId: pid, taskId: tid, category: cat, status: 'recorded', source: 'browser' };
 }
 
 function agentEvent(s: DemoState, kind: EventKind, now: number, detail: string, duplicate = false): DemoState {
   const offline = s.agent.connection !== 'online';
-  const ev = makeEvent(kind, now, 'agent', detail, !offline, s.employeeMemberId || THANDI_ID);
+  const ev = makeEvent(kind, now, 'agent', detail, !offline, s.employeeMemberId || THANDI_ID, currentWorkDate(s));
   if (!offline) return { ...s, events: [...s.events, ev] };
   return { ...s, agent: { ...s.agent, queue: duplicate ? [...s.agent.queue, ev, ev] : [...s.agent.queue, ev] } };
 }
@@ -31,6 +36,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
   const who = s.members.find((m) => m.id === T)?.name ?? 'Employee';
   const first = who.split(' ')[0];
   const now = a.now;
+  const today = currentWorkDate(s);
   const t = secToLabel(now);
   const se = s.session;
   switch (a.type) {
@@ -41,8 +47,8 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         let n: DemoState = {
           ...s,
           session: { state: 'clocked_in', clockInSec: now, projectId: a.projectId, taskId: a.taskId, category: a.category, submitted: false, workIntervalId: id },
-          intervals: [...s.intervals, workInterval(T, id, now, a.projectId, a.taskId, a.category)],
-          daySubmissions: { ...s.daySubmissions, [TODAY]: 'open' }
+          intervals: [...s.intervals, workInterval(T, id, now, today, a.projectId, a.taskId, a.category)],
+          daySubmissions: { ...s.daySubmissions, [today]: 'open' }
         };
         n = addEvent(n, 'clock_in', now, 'browser', `Clocked in · ${taskText(n, a.projectId, a.taskId, a.category)}`);
         n = addFeed(n, 'employee', `${first} clocked in at ${t} → employer dashboard shows “Clocked in”`, now);
@@ -56,7 +62,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         n = {
           ...n,
           session: { ...se, projectId: a.projectId, taskId: a.taskId, category: a.category, workIntervalId: id },
-          intervals: [...n.intervals, workInterval(T, id, now, a.projectId, a.taskId, a.category)]
+          intervals: [...n.intervals, workInterval(T, id, now, today, a.projectId, a.taskId, a.category)]
         };
         n = addEvent(n, 'task_switch', now, 'browser', `Switched to ${taskText(n, a.projectId, a.taskId, a.category)}`);
         return addToast(n, 'employee', 'Task switched', 'success');
@@ -69,7 +75,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         n = {
           ...n,
           session: { ...se, state: 'on_break', breakStartSec: now, breakCategory: a.category, breakIntervalId: id, workIntervalId: undefined },
-          intervals: [...n.intervals, { id, memberId: T, date: TODAY, type: 'break', startSec: now, breakCategory: a.category, status: 'recorded', source: 'browser' }]
+          intervals: [...n.intervals, { id, memberId: T, date: today, type: 'break', startSec: now, breakCategory: a.category, status: 'recorded', source: 'browser' }]
         };
         n = addEvent(n, 'break_start', now, 'browser', `${a.category} started`);
         n = addFeed(n, 'employee', `${first} started a ${a.category.toLowerCase()} → shown as “On break” to employer and agent`, now);
@@ -84,7 +90,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         n = {
           ...n,
           session: { ...se, state: 'clocked_in', breakStartSec: undefined, breakCategory: undefined, breakIntervalId: undefined, workIntervalId: id },
-          intervals: [...n.intervals, workInterval(T, id, now, se.projectId, se.taskId, se.category)]
+          intervals: [...n.intervals, workInterval(T, id, now, today, se.projectId, se.taskId, se.category)]
         };
         n = addEvent(n, 'break_end', now, 'browser', `${se.breakCategory} ended · ${fmtDur(dur)}`);
         n = addFeed(n, 'employee', `${first} ended break (${fmtDur(dur)})`, now);
@@ -116,14 +122,14 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         let n: DemoState = {
           ...s,
           session: { ...se, state: 'clocked_in', clockOutSec: undefined, workIntervalId: id, submitted: false },
-          intervals: [...s.intervals, workInterval(T, id, se.clockOutSec, se.projectId, se.taskId, se.category)]
+          intervals: [...s.intervals, workInterval(T, id, se.clockOutSec, today, se.projectId, se.taskId, se.category)]
         };
         n = addEvent(n, 'clock_out_reversed', now, 'browser', `Accidental clock-out at ${secToLabel(se.clockOutSec)} reversed — original event kept`);
-        n = addAudit(n, { actor: who, action: 'Reversed accidental clock-out', target: `Timesheet ${fmtDate(TODAY, 'd MMM')}`, reason: 'Within 10-minute self-service window', category: 'attendance' }, now);
+        n = addAudit(n, { actor: who, action: 'Reversed accidental clock-out', target: `Timesheet ${fmtDate(today, 'd MMM')}`, reason: 'Within 10-minute self-service window', category: 'attendance' }, now);
         return addToast(n, 'employee', 'Clock-out reversed. Your session continues.', 'success');
       }
     case 'SUBMIT_DAY':{
-        let n: DemoState = { ...s, session: { ...se, submitted: true }, daySubmissions: { ...s.daySubmissions, [TODAY]: 'submitted' } };
+        let n: DemoState = { ...s, session: { ...se, submitted: true }, daySubmissions: { ...s.daySubmissions, [today]: 'submitted' } };
         n = notify(n, 'employer', `Timesheet submitted: ${who}`, `Mon 26 Oct submitted for review.`, 'info', now);
         n = addAudit(n, { actor: who, action: 'Submitted day for review', target: 'Timesheet 26 Oct', category: 'attendance' }, now);
         n = addFeed(n, 'employee', `${first} submitted today’s timesheet → employer notified`, now);
@@ -138,7 +144,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         const start = now - trackingPolicy.idleThresholdMin * 60;
         let n: DemoState = {
           ...s,
-          intervals: [...s.intervals, { id, memberId: T, date: TODAY, type: 'idle', startSec: start, status: 'unclassified', source: 'agent', queued: offline }],
+          intervals: [...s.intervals, { id, memberId: T, date: today, type: 'idle', startSec: start, status: 'unclassified', source: 'agent', queued: offline }],
           agent: { ...s.agent, idleOpenId: id, screen: 'idle' }
         };
         n = agentEvent(n, 'idle_start', start, `No input for ${trackingPolicy.idleThresholdMin} min — idle threshold reached at ${t}`);
@@ -190,8 +196,8 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
             id, memberId: T, date: p.date, kind: p.kind, intervalId: p.intervalId, original: p.original, requested: p.requested, classification: p.classification,
             reason: p.reason, notes: p.notes, status: 'pending', source: p.source, durationSec: p.durationSec, projectId: se.projectId,
             history: [
-            { date: TODAY, time: t, actor: who, status: 'submitted', note: p.source === 'agent' ? 'Submitted from desktop agent' : undefined },
-            { date: TODAY, time: t, actor: 'System', status: 'pending', note: 'Routed to Pieter van Wyk' }]
+            { date: today, time: t, actor: who, status: 'submitted', note: p.source === 'agent' ? 'Submitted from desktop agent' : undefined },
+            { date: today, time: t, actor: 'System', status: 'pending', note: 'Routed to Pieter van Wyk' }]
 
           },
           ...s.corrections]
@@ -210,7 +216,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         if (!c) return s;
         let n: DemoState = {
           ...s,
-          corrections: s.corrections.map((x) => x.id === a.id ? { ...x, status: 'withdrawn', history: [...x.history, { date: TODAY, time: t, actor: who, status: 'withdrawn' }] } : x)
+          corrections: s.corrections.map((x) => x.id === a.id ? { ...x, status: 'withdrawn', history: [...x.history, { date: today, time: t, actor: who, status: 'withdrawn' }] } : x)
         };
         if (c.intervalId) n = patchInterval(n, c.intervalId, { status: 'unclassified', correctionId: undefined });
         n = addAudit(n, { actor: who, action: 'Withdrew correction request', target: c.original, category: 'correction' }, now);
@@ -224,7 +230,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
           ...s,
           corrections: s.corrections.map((x) =>
           x.id === a.id ?
-          { ...x, status: a.decision, reviewer, decisionReason: a.reason || undefined, history: [...x.history, { date: TODAY, time: t, actor: reviewer, status: a.decision, note: a.reason || undefined }] } :
+          { ...x, status: a.decision, reviewer, decisionReason: a.reason || undefined, history: [...x.history, { date: today, time: t, actor: reviewer, status: a.decision, note: a.reason || undefined }] } :
           x
           )
         };
@@ -251,7 +257,7 @@ export function timeReducer(s: DemoState, a: StampedAction): DemoState | null {
         let n: DemoState = {
           ...s,
           corrections: s.corrections.map((x) =>
-          x.id === a.id ? { ...x, status: 'pending', history: [...x.history, { date: TODAY, time: t, actor: who, status: 'pending', note: a.note }] } : x
+          x.id === a.id ? { ...x, status: 'pending', history: [...x.history, { date: today, time: t, actor: who, status: 'pending', note: a.note }] } : x
           )
         };
         if (c.intervalId) n = patchInterval(n, c.intervalId, { status: 'awaiting_review' });

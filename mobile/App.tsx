@@ -25,7 +25,7 @@ interface Correction {
 export function App() {
   const [screen, setScreen] = useState<Screen>('signin');
   const [token, setToken] = useState('');
-  const [email, setEmail] = useState('lerato@karoodigital.co.za');
+  const [email, setEmail] = useState('lerato@mzansiwork.co.za');
   const [password, setPassword] = useState('Password123');
   const [error, setError] = useState('');
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);

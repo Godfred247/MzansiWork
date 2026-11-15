@@ -14,7 +14,7 @@ import { useDemo } from '../../../contexts/DemoStore';
 import { correctionLabels } from '../../../data/statusLabels';
 import { useEmployerParams } from '../../../hooks/useEmployerParams';
 import type { CorrectionKind } from '../../../types/time';
-import { can, inScope } from '../../../utils/permissions';
+import { mayApprove } from '../../../utils/permissions';
 import { memberById, projectName } from '../../../utils/selectors';
 import { fmtDate, fmtDur } from '../../../utils/time';
 
@@ -44,7 +44,7 @@ export function CorrectionReview() {
   }
 
   const member = memberById(state, correction.memberId);
-  const allowed = can(state.viewerRole, 'approve_corrections') && inScope(state.viewerRole, correction.memberId);
+  const allowed = mayApprove(state, correction.memberId, 'approve_corrections');
   const open = correction.status === 'pending' || correction.status === 'submitted' || correction.status === 'info_requested';
   const meta = correctionLabels[correction.status];
 
@@ -63,7 +63,7 @@ export function CorrectionReview() {
       <ScreenBody>
         {!allowed &&
         <Banner tone="danger" title="You cannot decide this request">
-            Approvals are limited to people in your scope. The server rejects a decision from an unauthorised account.
+            The owner chooses who may approve this person’s timesheet. A manager is not the approver unless they were chosen.
           </Banner>
         }
         <div className="flex items-center justify-between px-1">

@@ -27,7 +27,7 @@ export function Reports() {
           <AccessDenied
             title="Reports are outside your role"
             body="This account can review assigned requests, but organisation reports are not included. Ask the owner if you need a report."
-            attempted="GET /api/organisations/karoo/reports"
+            attempted="GET /api/organisations/mzansiwork/reports"
             role={viewerRoleLabel(state.viewerRole)} />
         </ScreenBody>
       </>);

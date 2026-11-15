@@ -64,7 +64,7 @@ export function TrackingPolicy() {
         <h2 id="help-h" className="text-sm font-semibold text-ink">Something looks wrong?</h2>
         <p className="mt-1 text-[13px] text-muted">Request a correction from My Timesheets, or contact your organisation directly.</p>
         <div className="mt-3 flex flex-wrap gap-4 text-[13px]">
-          <span className="flex items-center gap-2 text-ink"><MailIcon className="h-4 w-4 text-muted" aria-hidden />HR · Nomsa Khumalo · nomsa@karoodigital.co.za</span>
+          <span className="flex items-center gap-2 text-ink"><MailIcon className="h-4 w-4 text-muted" aria-hidden />HR · Nomsa Khumalo · nomsa@mzansiwork.co.za</span>
           <span className="flex items-center gap-2 text-ink"><LifeBuoyIcon className="h-4 w-4 text-muted" aria-hidden />{brand.name} support · {brand.supportEmail}</span>
         </div>
         <p className="mt-3 text-xs text-muted">{state.org.name} is responsible for this policy. It must be reviewed against South African privacy and employment law before production use.</p>

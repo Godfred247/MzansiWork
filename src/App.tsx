@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { DemoProvider } from './contexts/DemoStore';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { SiteFrame } from './marketing/layout/SiteFrame';
 import { Home } from './marketing/pages/Home';
 import { AboutPage, ArticlePage, BlogPage, ContactPage, EntryPage, FaqPage, GuidesPage, HelpPage, LegalPage, NotFoundPage, ResourcesPage, TourPage } from './marketing/pages/InfoPages';
@@ -15,7 +16,9 @@ function Application() {
   }, []);
   return (
     <DemoProvider>
-      <DemoCanvas />
+      <ThemeProvider>
+        <DemoCanvas />
+      </ThemeProvider>
     </DemoProvider>
   );
 }

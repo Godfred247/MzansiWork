@@ -13,9 +13,11 @@ import { Segmented } from '../../../components/shared/Segmented';
 import { StatusBadge } from '../../../components/shared/StatusBadge';
 import { useDemo } from '../../../contexts/DemoStore';
 import { publicHolidays } from '../../../data/holidays';
-import { leaveLabels, leaveTypeLabels } from '../../../data/statusLabels';
+import { leaveLabels } from '../../../data/statusLabels';
 import type { LeaveStatus } from '../../../types/time';
+import { grantSummary, labelLeave } from '../../../utils/leavePolicy';
 import { inScope } from '../../../utils/permissions';
+import { isLiveOrg } from '../../../utils/workspace';
 import { memberById } from '../../../utils/selectors';
 import { TODAY, fmtDate } from '../../../utils/time';
 
@@ -23,6 +25,7 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'upcoming';
 
 export function LeaveManagement() {
   const { state, dispatch } = useDemo();
+  const live = isLiveOrg(state.orgId) && !state.flow;
   const [filter, setFilter] = useState<Filter>('pending');
   const [month, setMonth] = useState(startOfMonth(parseISO(TODAY)));
   const visible = state.leave.filter((l) => inScope(state.viewerRole, l.memberId));
@@ -104,23 +107,23 @@ export function LeaveManagement() {
                   key={l.id}
                   leading={<Avatar name={name} size="sm" />}
                   title={name}
-                  subtitle={`${leaveTypeLabels[l.type]} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')} · ${l.days}d`}
+                  subtitle={`${labelLeave(state.leavePolicies, l.type)} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')} · ${l.days}d`}
                   trailing={<StatusBadge tone={tone.tone} label={tone.label} />}
                   onClick={() => dispatch({ type: 'EMPLOYER_PUSH', route: { name: 'leave-request', params: { id: l.id } } })} />);
             })}
           </MSection>
         }
 
-        <MSection title="Leave types in this organisation" footer="Do not treat this list as automatic entitlement. Eligibility, accrual and evidence stay configurable and must be checked against current law before production.">
-          {state.balances.map((b) =>
-          <MRow
-            key={b.type}
-            title={leaveTypeLabels[b.type]}
-            subtitle={b.note}
-            trailing={<span className="tnum text-xs font-medium text-ink">{b.available === null ? 'Policy' : `${b.available}d`}</span>}
-            chevron={false} />
+        <MSection title={live ? 'Leave policy' : 'Leave types in this organisation'} footer="These figures are the ones the organisation enters. They are not a statement of what the law requires.">
+          {live && state.leavePolicies.length === 0 && <MRow title="No leave types saved yet" subtitle="Annual, sick and family responsibility start blank until you save them." onClick={() => dispatch({ type: 'EMPLOYER_PUSH', route: { name: 'leave-policy' } })} />}
+          {live && state.leavePolicies.map((policy) =>
+          <MRow key={policy.id} title={policy.name} subtitle={`${policy.enabled ? grantSummary(policy) : 'Hidden from employees'} · ${policy.appliesTo}`} onClick={() => dispatch({ type: 'EMPLOYER_PUSH', route: { name: 'leave-policy' } })} />
+          )}
+          {!live && state.balances.map((b) =>
+          <MRow key={b.type} title={labelLeave([], b.type)} subtitle={b.note} trailing={<span className="tnum text-xs font-medium text-ink">{b.available === null ? 'Policy' : `${b.available}d`}</span>} chevron={false} />
           )}
         </MSection>
+        {live && <Button full variant="secondary" onClick={() => dispatch({ type: 'EMPLOYER_PUSH', route: { name: 'leave-policy' } })}>Set leave types and days</Button>}
         <Button full variant="secondary" onClick={() => dispatch({ type: 'EMPLOYER_PUSH', route: { name: 'approvals', params: { tab: 'leave' } } })}>Open the approval inbox</Button>
       </ScreenBody>
     </>);

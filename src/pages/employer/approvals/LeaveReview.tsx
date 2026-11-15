@@ -10,15 +10,17 @@ import { EmptyState } from '../../../components/shared/EmptyState';
 import { Field } from '../../../components/shared/Field';
 import { StatusBadge } from '../../../components/shared/StatusBadge';
 import { TextArea } from '../../../components/shared/TextArea';
+import { ApiError, readToken } from '../../../api/client';
+import { reviewLeaveRequest } from '../../../api/leave';
 import { useDemo } from '../../../contexts/DemoStore';
-import { leaveLabels, leaveTypeLabels } from '../../../data/statusLabels';
+import { leaveLabels } from '../../../data/statusLabels';
 import { useEmployerParams } from '../../../hooks/useEmployerParams';
-import { can, inScope } from '../../../utils/permissions';
+import { mayApprove } from '../../../utils/permissions';
 import { leaveBreakdown, overlaps } from '../../../utils/leave';
+import { labelLeave, shownBalances } from '../../../utils/leavePolicy';
 import { memberById } from '../../../utils/selectors';
 import { fmtDate } from '../../../utils/time';
-
-const basisLabel = { statutory: 'Statutory minimum (configurable)', employer: 'Employer benefit', verify: 'Awaiting legal or HR verification' };
+import { isLiveOrg } from '../../../utils/workspace';
 
 export function LeaveReview() {
   const { state, dispatch } = useDemo();
@@ -38,11 +40,11 @@ export function LeaveReview() {
   }
 
   const member = memberById(state, request.memberId);
-  const allowed = can(state.viewerRole, 'approve_leave') && inScope(state.viewerRole, request.memberId);
+  const allowed = mayApprove(state, request.memberId, 'approve_leave');
   const open = request.status === 'pending' || request.status === 'info_requested';
   const meta = leaveLabels[request.status];
   const breakdown = leaveBreakdown(request.start, request.end, request.portion);
-  const balance = state.balances.find((b) => b.type === request.type);
+  const balance = shownBalances(state, request.memberId).find((item) => item.code === request.type);
   const overlapsWith = state.leave.filter((l) => l.id !== request.id && l.status !== 'rejected' && l.status !== 'withdrawn' && overlaps(l, request));
   const sameTeam = overlapsWith.filter((l) => memberById(state, l.memberId)?.department === member?.department);
 
@@ -51,8 +53,22 @@ export function LeaveReview() {
       setError(decision === 'rejected' ? 'Give a reason the employee can read.' : 'Say what you still need before you can decide.');
       return;
     }
-    dispatch({ type: 'REVIEW_LEAVE', id: request.id, decision, reason: reason.trim() });
-    setError('');
+    const finish = () => {
+      dispatch({ type: 'REVIEW_LEAVE', id: request.id, decision, reason: reason.trim() });
+      setError('');
+    };
+    if (isLiveOrg(state.orgId) && !state.flow && /^[0-9a-f-]{36}$/i.test(request.id)) {
+      const token = readToken('employer');
+      if (!token) {
+        setError('Sign in again before deciding this request.');
+        return;
+      }
+      void reviewLeaveRequest(token, request.id, { decision, reason: reason.trim() }).then(finish).catch((caught: unknown) => {
+        setError(caught instanceof ApiError ? caught.message : 'The decision was not saved.');
+      });
+      return;
+    }
+    finish();
   };
 
   return (
@@ -61,7 +77,7 @@ export function LeaveReview() {
       <ScreenBody>
         {!allowed &&
         <Banner tone="danger" title="You cannot decide this request">
-            Leave decisions follow the same permission scope as other approvals.
+            The owner chooses who may approve this person’s leave. A manager is not the approver unless they were chosen.
           </Banner>
         }
         <div className="flex items-center justify-between px-1">
@@ -69,7 +85,7 @@ export function LeaveReview() {
           <StatusBadge tone={meta.tone} label={meta.label} size="md" />
         </div>
         <MSection title="Request">
-          <MRow title={leaveTypeLabels[request.type]} subtitle={member ? `${member.department} · ${member.branch}` : undefined} chevron={false} />
+          <MRow title={labelLeave(state.leavePolicies, request.type)} subtitle={member ? `${member.department} · ${member.branch}` : undefined} chevron={false} />
           <MRow title={`${fmtDate(request.start, 'EEE d MMM')} – ${fmtDate(request.end, 'EEE d MMM yyyy')}`} subtitle={`${request.days} working day${request.days === 1 ? '' : 's'} · ${request.portion === 'full' ? 'Full days' : request.portion === 'morning' ? 'Morning only' : 'Afternoon only'}`} chevron={false} />
           {request.notes && <MRow title="Notes" subtitle={request.notes} chevron={false} />}
           <MRow title="Supporting document" subtitle={request.document ?? 'None attached'} chevron={false} />
@@ -85,7 +101,7 @@ export function LeaveReview() {
         <MSection title="Balance reference" footer="Balances are configured per policy. They are not a legal determination, and not every employee qualifies for every leave type.">
           {balance ?
           <>
-              <MRow title={balance.available === null ? 'No numeric balance' : `${balance.available} days available`} subtitle={`${basisLabel[balance.basis]}. Used in cycle: ${balance.used}.`} chevron={false} />
+              <MRow title={balance.available === null ? 'No numeric balance' : `${balance.available} days available`} subtitle={`${balance.badge}. Used in cycle: ${balance.used}.`} chevron={false} />
               <div className="px-4 py-3 text-xs leading-relaxed text-muted">{balance.note}</div>
             </> :
           <MRow title="No balance configured for this type" subtitle="Set the entitlement in organisation policy before treating this as payable leave." chevron={false} />
@@ -98,7 +114,7 @@ export function LeaveReview() {
           <MRow
             key={l.id}
             title={memberById(state, l.memberId)?.name ?? 'Employee'}
-            subtitle={`${leaveTypeLabels[l.type]} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')}`}
+            subtitle={`${labelLeave(state.leavePolicies, l.type)} · ${fmtDate(l.start, 'd MMM')}–${fmtDate(l.end, 'd MMM')}`}
             trailing={<StatusBadge tone={leaveLabels[l.status].tone} label={leaveLabels[l.status].label} />}
             chevron={false} />
           )}

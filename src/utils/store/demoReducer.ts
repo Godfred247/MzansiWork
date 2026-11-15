@@ -21,7 +21,7 @@ function advanceFlow(s: DemoState, a: StampedAction): DemoState {
 }
 
 export function demoReducer(s: DemoState, a: StampedAction): DemoState {
-  if (a.type === 'REPLACE_STATE') return a.state;
+  if (a.type === 'REPLACE_STATE') return { ...a.state, employeeWorkOptions: s.employeeWorkOptions };
   const next = uiReducer(s, a) ?? timeReducer(s, a) ?? orgReducer(s, a) ?? s;
   return advanceFlow(next, a);
 }

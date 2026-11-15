@@ -89,12 +89,19 @@ public class WorkforceController(AppDbContext db, IConfiguration configuration) 
     [HttpPost("leave")]
     public async Task<IActionResult> SubmitLeave(LeaveRequestBody body)
     {
+        var orgId = CurrentUser.Org(User);
+        var policies = await db.LeavePolicies.Where(x => x.OrganisationId == orgId).ToListAsync();
+        if (string.IsNullOrWhiteSpace(body.LeaveType))
+            return BadRequest(new { message = "Choose a leave type." });
+        var leaveType = body.LeaveType.Trim().ToLowerInvariant();
+        if (policies.Count > 0 && !policies.Any(x => x.Enabled && x.Code == leaveType))
+            return BadRequest(new { message = "That leave type is not available. Ask the owner to switch it on." });
         var row = new LeaveRequestRecord
         {
             Id = Guid.NewGuid(),
             OrganisationId = CurrentUser.Org(User),
             UserId = CurrentUser.Id(User),
-            LeaveType = body.LeaveType,
+            LeaveType = leaveType,
             Start = body.Start,
             End = body.End,
             Days = body.Days,
@@ -155,7 +162,7 @@ public class WorkforceController(AppDbContext db, IConfiguration configuration) 
             Id = Guid.NewGuid(),
             OrganisationId = orgId,
             ToAddress = email,
-            Subject = "You’re invited to Karoo Digital (Pty) Ltd on MzansiWork",
+            Subject = "You’re invited to Mzansi Work (Pty) Ltd on MzansiWork",
             Body = $"You have been invited as a {request.Role} in {request.Department}. The link expires in 7 days and reserves one seat. Employees do not buy their own subscription.",
             Status = string.IsNullOrWhiteSpace(configuration["SendGrid:ApiKey"]) ? "queued" : "ready",
             CreatedAt = DateTimeOffset.UtcNow

@@ -64,7 +64,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "MzansiWork",
         Version = "v1",
-        Description = "Create an organisation with POST /api/auth/register, or sign in with POST /api/auth/login. Then use Authorize and paste the token. Sample company, if you need it: lerato@karoodigital.co.za / Password123."
+        Description = "Create an organisation with POST /api/auth/register, or sign in with POST /api/auth/login. Then use Authorize and paste the token. Sample company, if you need it: lerato@mzansiwork.co.za / Password123."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -116,6 +116,101 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+    var createWorkOptionsTable = provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase)
+        ? """
+          CREATE TABLE IF NOT EXISTS "EmployeeWorkOptions" (
+              "OrganisationId" TEXT NOT NULL,
+              "UserId" TEXT NOT NULL,
+              "ProjectsJson" TEXT NOT NULL,
+              "TasksJson" TEXT NOT NULL,
+              "CategoriesJson" TEXT NOT NULL,
+              PRIMARY KEY ("OrganisationId", "UserId")
+          );
+          """
+        : """
+          CREATE TABLE IF NOT EXISTS mzansi."EmployeeWorkOptions" (
+              "OrganisationId" uuid NOT NULL,
+              "UserId" uuid NOT NULL,
+              "ProjectsJson" text NOT NULL,
+              "TasksJson" text NOT NULL,
+              "CategoriesJson" text NOT NULL,
+              PRIMARY KEY ("OrganisationId", "UserId")
+          );
+          """;
+    db.Database.ExecuteSqlRaw(createWorkOptionsTable);
+    var leavePolicySql = provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase)
+        ? new[]
+        {
+            """
+            CREATE TABLE IF NOT EXISTS "LeavePolicies" (
+                "Id" TEXT NOT NULL CONSTRAINT "PK_LeavePolicies" PRIMARY KEY,
+                "OrganisationId" TEXT NOT NULL,
+                "Code" TEXT NOT NULL,
+                "Name" TEXT NOT NULL,
+                "Enabled" INTEGER NOT NULL,
+                "TracksDays" INTEGER NOT NULL,
+                "GrantMode" TEXT NOT NULL,
+                "AllowanceDays" TEXT NULL,
+                "MonthlyDays" TEXT NULL,
+                "Cycle" TEXT NOT NULL,
+                "CycleStart" TEXT NOT NULL,
+                "AppliesTo" TEXT NOT NULL,
+                "EmployeeNote" TEXT NOT NULL,
+                "SortOrder" INTEGER NOT NULL
+            );
+            """,
+            """CREATE UNIQUE INDEX IF NOT EXISTS "IX_LeavePolicies_OrganisationId_Code" ON "LeavePolicies" ("OrganisationId", "Code");""",
+            """
+            CREATE TABLE IF NOT EXISTS "LeaveOpenings" (
+                "Id" TEXT NOT NULL CONSTRAINT "PK_LeaveOpenings" PRIMARY KEY,
+                "OrganisationId" TEXT NOT NULL,
+                "UserId" TEXT NOT NULL,
+                "PolicyId" TEXT NOT NULL,
+                "OpeningDays" TEXT NOT NULL,
+                "AsOf" TEXT NOT NULL
+            );
+            """,
+            """CREATE UNIQUE INDEX IF NOT EXISTS "IX_LeaveOpenings_OrganisationId_UserId_PolicyId" ON "LeaveOpenings" ("OrganisationId", "UserId", "PolicyId");"""
+        }
+        : new[]
+        {
+            """
+            CREATE TABLE IF NOT EXISTS mzansi."LeavePolicies" (
+                "Id" uuid NOT NULL,
+                "OrganisationId" uuid NOT NULL,
+                "Code" text NOT NULL,
+                "Name" text NOT NULL,
+                "Enabled" boolean NOT NULL,
+                "TracksDays" boolean NOT NULL,
+                "GrantMode" text NOT NULL,
+                "AllowanceDays" numeric(6,2) NULL,
+                "MonthlyDays" numeric(6,2) NULL,
+                "Cycle" text NOT NULL,
+                "CycleStart" date NOT NULL,
+                "AppliesTo" text NOT NULL,
+                "EmployeeNote" text NOT NULL,
+                "SortOrder" integer NOT NULL,
+                CONSTRAINT "PK_LeavePolicies" PRIMARY KEY ("Id")
+            );
+            """,
+            """CREATE UNIQUE INDEX IF NOT EXISTS "IX_LeavePolicies_OrganisationId_Code" ON mzansi."LeavePolicies" ("OrganisationId", "Code");""",
+            """CREATE INDEX IF NOT EXISTS "IX_LeavePolicies_OrganisationId" ON mzansi."LeavePolicies" ("OrganisationId");""",
+            """ALTER TABLE mzansi."LeavePolicies" ENABLE ROW LEVEL SECURITY;""",
+            """
+            CREATE TABLE IF NOT EXISTS mzansi."LeaveOpenings" (
+                "Id" uuid NOT NULL,
+                "OrganisationId" uuid NOT NULL,
+                "UserId" uuid NOT NULL,
+                "PolicyId" uuid NOT NULL,
+                "OpeningDays" numeric(6,2) NOT NULL,
+                "AsOf" date NOT NULL,
+                CONSTRAINT "PK_LeaveOpenings" PRIMARY KEY ("Id")
+            );
+            """,
+            """CREATE UNIQUE INDEX IF NOT EXISTS "IX_LeaveOpenings_OrganisationId_UserId_PolicyId" ON mzansi."LeaveOpenings" ("OrganisationId", "UserId", "PolicyId");""",
+            """ALTER TABLE mzansi."LeaveOpenings" ENABLE ROW LEVEL SECURITY;"""
+        };
+    foreach (var statement in leavePolicySql) db.Database.ExecuteSqlRaw(statement);
     DbSeeder.Seed(db);
 }
 

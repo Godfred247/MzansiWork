@@ -37,7 +37,7 @@ export function AuditHistory() {
           <AccessDenied
             title="Audit history is restricted"
             body="You can see decisions you are allowed to make. The full administrative history is limited to the owner and scoped managers."
-            attempted="GET /api/organisations/karoo/audit"
+            attempted="GET /api/organisations/mzansiwork/audit"
             role={viewerRoleLabel(state.viewerRole)} />
         </ScreenBody>
       </>);

@@ -80,7 +80,7 @@ export function LiveWorkspace() {
       const response = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'lerato@karoodigital.co.za', password: 'Password123' })
+        body: JSON.stringify({ email: 'lerato@mzansiwork.co.za', password: 'Password123' })
       });
       if (!response.ok) throw new Error(await readError(response));
       const body = await response.json();
@@ -98,7 +98,7 @@ export function LiveWorkspace() {
     setBusy(true);
     setMessage('');
     try {
-      const email = `new.hire.${Date.now()}@karoodigital.co.za`;
+      const email = `new.hire.${Date.now()}@mzansiwork.co.za`;
       const response = await fetch(`${API}/api/invitations`, {
         method: 'POST',
         headers: headers(true),

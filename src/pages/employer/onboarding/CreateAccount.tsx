@@ -56,7 +56,7 @@ export function CreateAccount() {
             )}
           </ul>
           <Field label="Confirm password" htmlFor="ca-pw2" error={err('pw2')}><TextInput id="ca-pw2" type="password" value={f.pw2} invalid={!!err('pw2')} onChange={set('pw2')} autoComplete="new-password" /></Field>
-          <Field label="Organisation name" htmlFor="ca-org" error={err('org')}><TextInput id="ca-org" value={f.org} invalid={!!err('org')} onChange={set('org')} placeholder="e.g. Karoo Digital (Pty) Ltd" /></Field>
+          <Field label="Organisation name" htmlFor="ca-org" error={err('org')}><TextInput id="ca-org" value={f.org} invalid={!!err('org')} onChange={set('org')} placeholder="e.g. Mzansi Work (Pty) Ltd" /></Field>
           <Field label="Region" htmlFor="ca-country" hint="Built for Southern Africa. Subscriptions are billed in South African rand."><SelectInput id="ca-country" disabled value="ZA" options={[{ value: 'ZA', label: 'Southern Africa (ZAR)' }]} /></Field>
           <label className="flex items-start gap-2.5 text-[13px] text-ink">
             <input type="checkbox" checked={f.agree} onChange={set('agree')} className="mt-0.5 h-4 w-4 accent-primary" />

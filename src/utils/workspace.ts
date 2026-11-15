@@ -101,12 +101,17 @@ export function applyWorkspace(state: DemoState, workspace: WorkspaceSnapshot, a
       events: [],
       corrections: [],
       leave: [],
+      leavePolicies: [],
+      leaveOpenings: [],
       daySubmissions: {},
       exports: [],
       audit: [],
       notifications: [],
       feed: [],
+      approverFor: {},
       projects: [generalProject(members, workspace.organisation.name)],
+      employeeWorkOptions: { projects: [], tasks: [], categories: [] },
+      employeeWorkOptionsLoading: false,
       balances: [
         { type: 'annual', available: null, used: 0, basis: 'employer', note: 'Set the allowance in leave settings. This is not a statutory balance.' },
         { type: 'sick', available: null, used: 0, basis: 'employer', note: 'Configurable by the employer.' },
@@ -129,12 +134,15 @@ export function applyWorkspace(state: DemoState, workspace: WorkspaceSnapshot, a
       lastInviteId: pending?.id ?? state.lastInviteId
     };
   } else {
+    const sameEmployee = state.orgId === workspace.organisation.id && state.employeeMemberId === workspace.user.id;
     next = {
       ...next,
       employeeAuthed: true,
       employeeIssue: null,
       employeeRoute: { name: 'day' },
       employeeMemberId: workspace.user.id,
+      employeeWorkOptions: sameEmployee ? state.employeeWorkOptions : { projects: [], tasks: [], categories: [] },
+      employeeWorkOptionsLoading: true,
       session: sameOrganisation ? state.session : { state: 'clocked_out', category: 'General administration', submitted: false }
     };
   }

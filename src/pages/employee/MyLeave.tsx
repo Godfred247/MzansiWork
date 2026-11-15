@@ -10,15 +10,10 @@ import { StatusBadge } from '../../components/shared/StatusBadge';
 import { useDemo } from '../../contexts/DemoStore';
 import { useEmployeeLayout } from '../../contexts/EmployeeLayout';
 import { actorId } from '../../utils/selectors';
-import { leaveLabels, leaveTypeLabels } from '../../data/statusLabels';
-import type { BalanceBasis, LeaveRequest } from '../../types/time';
+import { leaveLabels } from '../../data/statusLabels';
+import type { LeaveRequest } from '../../types/time';
+import { labelLeave, shownBalances } from '../../utils/leavePolicy';
 import { TODAY, fmtDate } from '../../utils/time';
-
-const basisLabel: Record<BalanceBasis, {label: string;tone: 'info' | 'primary' | 'warning';}> = {
-  statutory: { label: 'Statutory minimum + policy', tone: 'info' },
-  employer: { label: 'Employer benefit', tone: 'primary' },
-  verify: { label: 'Awaiting HR verification', tone: 'warning' }
-};
 
 export function MyLeave() {
   const { state, dispatch } = useDemo();
@@ -26,6 +21,7 @@ export function MyLeave() {
   const [formOpen, setFormOpen] = useState(false);
   const [detail, setDetail] = useState<LeaveRequest | null>(null);
   const mine = state.leave.filter((l) => l.memberId === actorId(state));
+  const balances = shownBalances(state, actorId(state));
   const current = mine.filter((l) => l.status === 'pending' || l.status === 'info_requested' || l.status === 'approved' && l.end >= TODAY);
   const history = mine.filter((l) => !current.includes(l));
   const live = detail ? state.leave.find((l) => l.id === detail.id) ?? detail : null;
@@ -35,7 +31,7 @@ export function MyLeave() {
       <button onClick={() => setDetail(l)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-canvas">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"><PlaneIcon className="h-4 w-4" aria-hidden /></span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-ink">{leaveTypeLabels[l.type]}</span>
+          <span className="block truncate text-sm font-medium text-ink">{labelLeave(state.leavePolicies, l.type)}</span>
           <span className="tnum block text-xs text-muted">{fmtDate(l.start, 'EEE d MMM')}{l.end !== l.start && ` – ${fmtDate(l.end, 'EEE d MMM')}`} · {l.days} day{l.days === 1 ? '' : 's'}</span>
         </span>
         <StatusBadge tone={leaveLabels[l.status].tone} label={leaveLabels[l.status].label} />
@@ -50,12 +46,15 @@ export function MyLeave() {
       <section aria-labelledby="bal-h">
         <h2 id="bal-h" className="sr-only">Leave balances</h2>
         <ul className={twMerge('grid gap-3', layout === 'narrow' ? 'grid-cols-2' : 'grid-cols-3')}>
-          {state.balances.map((b) =>
-          <li key={b.type} className="flex flex-col rounded-2xl border border-line bg-surface p-4">
-              <p className="text-[13px] font-medium text-ink">{leaveTypeLabels[b.type].replace(' (employer benefit)', '')}</p>
+          {balances.length === 0 ?
+          <li className="rounded-2xl border border-line bg-surface p-4 text-sm text-muted">Your employer has not set leave types yet.</li> :
+          balances.map((b) =>
+          <li key={b.code} className="flex flex-col rounded-2xl border border-line bg-surface p-4">
+              <p className="text-[13px] font-medium text-ink">{b.name}</p>
               <p className="tnum mt-2 text-2xl font-semibold text-ink">{b.available === null ? '—' : b.available}<span className="ml-1 text-sm font-normal text-muted">{b.available === null ? '' : 'days left'}</span></p>
               <p className="mt-1 text-xs text-muted">{b.note}</p>
-              <div className="mt-auto pt-3"><StatusBadge tone={basisLabel[b.basis].tone} label={basisLabel[b.basis].label} /></div>
+              {b.next && <p className="mt-1 text-xs text-muted">{b.next}</p>}
+              <div className="mt-auto pt-3"><StatusBadge tone="primary" label={b.badge} /></div>
             </li>
           )}
         </ul>
@@ -77,7 +76,7 @@ export function MyLeave() {
       <Dialog
         open={!!live}
         onClose={() => setDetail(null)}
-        title={live ? leaveTypeLabels[live.type] : ''}
+        title={live ? labelLeave(state.leavePolicies, live.type) : ''}
         size="sm"
         footer={
         live?.status === 'pending' ?

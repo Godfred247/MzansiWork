@@ -6,6 +6,7 @@ import { actorMember } from '../../utils/selectors';
 import { Avatar } from '../shared/Avatar';
 import { Logo } from '../shared/Logo';
 import { EmployeeNavIcon } from './EmployeeNavIcon';
+import { EmployeeAccountControls } from './EmployeeAccountControls';
 
 export function EmployeeSidebar({ rail }: {rail?: boolean;}) {
   const { state, dispatch } = useDemo();
@@ -56,14 +57,17 @@ export function EmployeeSidebar({ rail }: {rail?: boolean;}) {
 
         })}
       </ul>
-      <div className={twMerge('flex items-center gap-2.5 border-t border-line py-3', rail ? 'justify-center' : 'px-4')}>
-        <Avatar name={me?.name ?? 'Employee'} size="sm" />
+      <div className={twMerge('border-t border-line py-3', rail ? 'flex flex-col items-center gap-2' : 'px-3')}>
         {!rail &&
-        <div className="min-w-0">
-            <p className="truncate text-[13px] font-medium text-ink">{me?.name ?? 'Not signed in'}</p>
-            <p className="truncate text-xs text-muted">{state.org.name}</p>
+          <div className="mb-2 flex items-center gap-2.5 px-1">
+            <Avatar name={me?.name ?? 'Employee'} size="sm" />
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-medium text-ink">{me?.name ?? 'Not signed in'}</p>
+              <p className="truncate text-xs text-muted">{state.org.name}</p>
+            </div>
           </div>
         }
+        <EmployeeAccountControls compact={rail} />
       </div>
     </nav>);
 

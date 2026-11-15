@@ -10,10 +10,11 @@ import { TimelineBar } from '../../components/shared/TimelineBar';
 import { TimelineLegend } from '../../components/shared/TimelineLegend';
 import { useClock, useDemo } from '../../contexts/DemoStore';
 import { useEmployeeLayout } from '../../contexts/EmployeeLayout';
-import { actorId } from '../../utils/selectors';
+import { actorId, currentWorkDate } from '../../utils/selectors';
 import { correctionLabels } from '../../data/statusLabels';
 import { dayTotals, intervalsFor } from '../../utils/selectors';
-import { TODAY, fmtDate, fmtDur, range } from '../../utils/time';
+import { isLiveOrg } from '../../utils/workspace';
+import { fmtDate, fmtDur, range } from '../../utils/time';
 
 const pastDays = ['2026-10-23', '2026-10-22', '2026-10-21', '2026-10-20'];
 
@@ -24,16 +25,24 @@ export function MyDay() {
   const [summary, setSummary] = useState(false);
   const [target, setTarget] = useState<CorrectionTarget>(null);
   const showSummary = useCallback(() => setSummary(true), []);
-  const today = intervalsFor(state, actorId(state), TODAY);
-  const unresolved = state.intervals.filter((i) => i.memberId === actorId(state) && i.type === 'idle' && !i.queued && i.endSec !== undefined && (i.status === 'unclassified' || i.status === 'info_requested'));
-  const myRequests = state.corrections.filter((c) => c.memberId === actorId(state) && (c.status === 'pending' || c.status === 'info_requested'));
-  const greeting = clock < 12 * 3600 ? 'Good morning' : clock < 17 * 3600 ? 'Good afternoon' : 'Good evening';
+  const me = actorId(state);
+  const live = isLiveOrg(state.orgId) && !state.flow;
+  const todayIso = currentWorkDate(state);
+  const today = intervalsFor(state, me, todayIso);
+  const unresolved = state.intervals.filter((i) => i.memberId === me && i.type === 'idle' && !i.queued && i.endSec !== undefined && (i.status === 'unclassified' || i.status === 'info_requested'));
+  const myRequests = state.corrections.filter((c) => c.memberId === me && (c.status === 'pending' || c.status === 'info_requested'));
+  const greetingSec = ((clock % 86400) + 86400) % 86400;
+  const greeting = greetingSec < 12 * 3600 ? 'Good morning' : greetingSec < 17 * 3600 ? 'Good afternoon' : 'Good evening';
+  const firstName = state.members.find((member) => member.id === me)?.name.split(' ')[0] ?? 'there';
+  const recent = live
+    ? [...new Set(state.intervals.filter((interval) => interval.memberId === me && interval.date < todayIso).map((interval) => interval.date))].sort().reverse().slice(0, 4)
+    : pastDays;
 
   return (
     <div className={twMerge('mx-auto max-w-6xl', layout === 'narrow' ? 'space-y-4 p-4' : 'space-y-6 p-8')}>
       <div>
-        <p className="text-sm text-muted">{fmtDate(TODAY, 'EEEE d MMMM yyyy')}</p>
-        <h1 className={twMerge('font-semibold tracking-tight text-ink', layout === 'narrow' ? 'text-xl' : 'text-2xl')}>{greeting}, Thandi</h1>
+        <p className="text-sm text-muted">{fmtDate(todayIso, 'EEEE d MMMM yyyy')}</p>
+        <h1 className={twMerge('font-semibold tracking-tight text-ink', layout === 'narrow' ? 'text-xl' : 'text-2xl')}>{greeting}, {firstName}</h1>
       </div>
 
       <div className={twMerge('grid gap-6', layout === 'wide' && 'grid-cols-[minmax(0,1fr)_320px]')}>
@@ -91,9 +100,11 @@ export function MyDay() {
               <h2 id="recent-h" className="text-sm font-semibold text-ink">Recent days</h2>
               <button onClick={() => dispatch({ type: 'EMPLOYEE_NAV', route: { name: 'timesheets' } })} className="text-xs font-medium text-primary hover:underline">All timesheets</button>
             </div>
+            {recent.length === 0 ?
+            <p className="mt-3 text-sm text-muted">No earlier days yet.</p> :
             <ul className="mt-3 divide-y divide-line">
-              {pastDays.map((d) => {
-                const t = dayTotals(intervalsFor(state, actorId(state), d), clock);
+              {recent.map((d) => {
+                const t = dayTotals(intervalsFor(state, me, d), clock);
                 const st = state.daySubmissions[d];
                 return (
                   <li key={d} className="flex items-center justify-between gap-2 py-2.5">
@@ -105,7 +116,7 @@ export function MyDay() {
                   </li>);
 
               })}
-            </ul>
+            </ul>}
           </section>
         </aside>
       </div>
